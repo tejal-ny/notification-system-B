@@ -1,0 +1,21 @@
+{
+  "name": "notification-system",
+  "version": "1.0.0",
+  "description": "A flexible notification system for Node.js applications",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "notification",
+    "email",
+    "sms",
+    "push",
+    "webhook"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}
