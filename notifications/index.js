@@ -9,20 +9,52 @@ const NOTIFICATION_TYPES = {
   PUSH: "push",
   WEBHOOK: "webhook",
 };
+/**
+ * Notification system module
+ */
+
+// Import notification providers
+const emailNotifier = require("./emails");
+// import emailNotifier from "./emails"
+// Store notification handlers
+const notificationHandlers = {
+  [NOTIFICATION_TYPES.EMAIL]: emailNotifier.sendEmail,
+  // Other handlers will be added as implemented
+};
 
 // Notification system core functionality
 const notificationSystem = {
   // Send a notification
-  send: (type, recipient, message, options = {}) => {
+  send: async (type, recipient, message, options = {}) => {
     console.log(`Sending ${type} notification to ${recipient}`);
-    // Implementation will be added here
-    return true;
+
+    if (!notificationHandlers[type]) {
+      throw new Error(`Notification type '${type}' not supported`);
+    }
+
+    try {
+      // For email notifications, use subject and message format
+      if (type === NOTIFICATION_TYPES.EMAIL) {
+        return await notificationHandlers[type](
+          recipient,
+          options.subject || "Notification",
+          message,
+          options
+        );
+      }
+
+      // For other notification types
+      return await notificationHandlers[type](recipient, message, options);
+    } catch (error) {
+      console.error(`Failed to send ${type} notification:`, error);
+      throw error;
+    }
   },
 
   // Register notification handler
   registerHandler: (type, handler) => {
     console.log(`Registering handler for ${type} notifications`);
-    // Implementation will be added here
+    notificationHandlers[type] = handler;
   },
 
   // Get available notification types
