@@ -20,6 +20,13 @@ const emailConfig = {
   defaultFrom: process.env.EMAIL_FROM || 'notification-system@example.com'
 };
 
+// SMS configuration
+const smsConfig = {
+  accountSid: process.env.TWILIO_ACCOUNT_SID,
+  authToken: process.env.TWILIO_AUTH_TOKEN,
+  fromNumber: process.env.TWILIO_FROM_NUMBER
+};
+
 // Validate required configuration
 function validateConfig() {
   const missingVars = [];

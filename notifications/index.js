@@ -12,6 +12,7 @@ const NOTIFICATION_TYPES = {
 /**
  * Notification system module
  */
+const smsNotifier = require('./sms');
 
 // Import notification providers
 const emailNotifier = require("./emails");
@@ -57,12 +58,17 @@ const notificationSystem = {
   registerHandler: (type, handler) => {
     console.log(`Registering handler for ${type} notifications`);
     notificationHandlers[type] = handler;
+    return notificationSystem; // For method chaining
   },
 
   // Get available notification types
   getTypes: () => {
     return Object.values(NOTIFICATION_TYPES);
   },
+   // Check if a notification type is supported
+  isSupported: (type) => {
+    return !!notificationHandlers[type];
+  }
 };
 
 // Export notification types and system

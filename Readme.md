@@ -3,14 +3,22 @@
 A flexible notification system for Node.js applications that supports multiple notification channels.
 
 ## Project Structure
-
 - `index.js`: Main entry point for the application
+- `config.js`: Configuration management using environment variables
 - `notifications/`: Directory containing notification functionality
-- `package.json`: Project configuration and dependencies
   - `index.js`: Core notification system
   - `email.js`: Email notification provider
+  - `sms.js`: SMS notification provider using Twilio
+  - `validators.js`: Input validation utilities
 - `package.json`: Project configuration and dependencies
 - `.env.example`: Example environment variable configuration
+
+## Supported Notification Types
+- Email (via SMTP/Nodemailer)
+- SMS (via Twilio)
+- Push (coming soon)
+- Webhook (coming soon)
+
 
 ## Getting Started
 
@@ -24,6 +32,7 @@ A flexible notification system for Node.js applications that supports multiple n
 
 The application uses the following environment variables:
 
+### General
 |
  Variable 
 |
@@ -44,6 +53,22 @@ The application uses the following environment variables:
  Environment mode (development/production) 
 |
  development 
+|
+
+### Email Configuration
+|
+ Variable 
+|
+ Description 
+|
+ Default 
+|
+|
+----------
+|
+-------------
+|
+---------
 |
 |
  EMAIL_MODE 
@@ -95,7 +120,51 @@ The application uses the following environment variables:
  notification-system@example.com 
 |
 
-In development mode or when EMAIL_MODE=mock, the system will use a mock email sender that only logs messages to the console.
+### SMS Configuration
+|
+ Variable 
+|
+ Description 
+|
+ Default 
+|
+|
+----------
+|
+-------------
+|
+---------
+|
+|
+ SMS_MODE 
+|
+ SMS mode (mock/real) 
+|
+ - 
+|
+|
+ TWILIO_ACCOUNT_SID 
+|
+ Twilio Account SID 
+|
+ - 
+|
+|
+ TWILIO_AUTH_TOKEN 
+|
+ Twilio Auth Token 
+|
+ - 
+|
+|
+ TWILIO_FROM_NUMBER 
+|
+ Twilio phone number to send from 
+|
+ - 
+|
+
+In development mode or when EMAIL_MODE/SMS_MODE=mock, the system will use mock implementations that only log messages to the console..
 
 
 ## Features
