@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "dev": "NODE_ENV=development EMAIL_MODE=mock node index.js",
+    "test:validators": "node tests/validators.test.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

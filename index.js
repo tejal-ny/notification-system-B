@@ -12,25 +12,63 @@ const notificationSystem = require("./notifications");
 // Initialize the notification system
 console.log("Initializing notification system...");
 
+// If this file is run directly, start the notification service
+async function sendExampleEmails() {
+  try {
+    // Valid email example
+    console.log("\nSending to valid email address:");
+    const result = await notificationSystem.send(
+      notificationSystem.types.EMAIL,
+      "valid.user@example.com",
+      "This is a test of the email validation system.",
+      {
+        subject: "Valid Email Test",
+        from: "notification-system@example.com",
+      }
+    );
+    console.log("Success:", result);
+
+    // Invalid email example
+    console.log("\nAttempting to send to invalid email address:");
+    await notificationSystem.send(
+      notificationSystem.types.EMAIL,
+      "invalid-email-address",
+      "This message should not be sent.",
+      {
+        subject: "Invalid Email Test",
+      }
+    );
+  } catch (error) {
+    console.error("Test error caught:", error.message);
+    if (error.code === "INVALID_RECIPIENT" && error.invalidEmails) {
+      console.error("Failed due to invalid recipients:", error.invalidEmails);
+    }
+  }
+
+  // Multiple recipients - some valid, some invalid
+  try {
+    console.log("\nAttempting to send to mixed email addresses:");
+    await notificationSystem.send(
+      notificationSystem.types.EMAIL,
+      "valid.user@example.com, invalid-address, another.user@example.com",
+      "This message should not be sent due to partial invalid recipients.",
+      {
+        subject: "Mixed Email Test",
+      }
+    );
+  } catch (error) {
+    console.error("Test error caught:", error.message);
+    if (error.code === "INVALID_RECIPIENT" && error.invalidEmails) {
+      console.error("Failed due to invalid recipients:", error.invalidEmails);
+    }
+  }
+}
+
+// If this file is run directly, run the examples
+if (require.main === module) {
+  console.log("Starting notification service with validation examples...");
+  sendExampleEmails();
+}
+
 // Export notification functionality for use in other modules
 module.exports = notificationSystem;
-
-// If this file is run directly, start the notification service
-if (require.main === module) {
-  console.log('Starting notification service...');
-  
-  // Example of sending an email notification
-  notificationSystem.send(
-    notificationSystem.types.EMAIL,
-    'recipient@example.com',
-    'This is the email body content.',
-    {
-      subject: 'Test Notification',
-      from: 'sender@example.com'
-    }
-  ).then(result => {
-    console.log('Notification sent successfully:', result);
-  }).catch(error => {
-    console.error('Failed to send notification:', error);
-  });
-}

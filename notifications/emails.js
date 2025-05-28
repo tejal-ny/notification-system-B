@@ -1,13 +1,13 @@
 /**
  * Email notification module
- * 
+ *
  * This module provides functionality to send email notifications
  * using Nodemailer with environment-based configuration
  */
 
-const nodemailer = require('nodemailer');
-const config = require('../config');
-
+const nodemailer = require("nodemailer");
+const config = require("../config");
+const { validateEmailAddresses } = require("./validators");
 // Validate email configuration on module load
 config.validateConfig();
 
@@ -16,8 +16,8 @@ let transporter;
 
 // Initialize email transport
 function initTransporter() {
-  if (process.env.EMAIL_MODE === 'mock' || config.isDev) {
-    console.log('📧 Using mock email transport in development mode');
+  if (process.env.EMAIL_MODE === "mock" || config.isDev) {
+    console.log("📧 Using mock email transport in development mode");
     return null; // No actual transporter needed for mock
   } else {
     // Create real nodemailer transport with configs from environment
@@ -25,7 +25,7 @@ function initTransporter() {
       host: config.email.host,
       port: config.email.port,
       secure: config.email.secure,
-      auth: config.email.auth
+      auth: config.email.auth,
     });
   }
 }
@@ -35,17 +35,48 @@ function sendEmailMock(to, subject, body, options = {}) {
   return new Promise((resolve) => {
     // Simulate network delay
     setTimeout(() => {
-      console.log('-------------------------');
-      console.log('📧 MOCK EMAIL SENT:');
+      console.log("-------------------------");
+      console.log("📧 MOCK EMAIL SENT:");
       console.log(`From: ${options.from || config.email.defaultFrom}`);
       console.log(`To: ${to}`);
       console.log(`Subject: ${subject}`);
-      console.log('-------------------------');
+      console.log("-------------------------");
       console.log(body);
-      console.log('-------------------------');
+      console.log("-------------------------");
       resolve({ success: true, messageId: `mock-${Date.now()}` });
     }, 500);
   });
+}
+
+/**
+ * Validates recipient email addresses and formats them
+ *
+ * @param {string|string[]} to - Single email or multiple emails (comma-separated or array)
+ * @returns {Object} - Validation result with formatted recipients if valid
+ */
+
+function validateRecipients(to) {
+  // Handle array of email addresses
+  if (Array.isArray(to)) {
+    to = to.join(",");
+  }
+
+  const validation = validateEmailAddresses(to);
+
+  if (!validation.isValid) {
+    return {
+      isValid: false,
+      error: `Invalid email address(es): ${validation.invalidEmails.join(
+        ", "
+      )}`,
+      invalidEmails: validation.invalidEmails,
+    };
+  }
+
+  return {
+    isValid: true,
+    recipients: to,
+  };
 }
 
 /**
@@ -59,37 +90,58 @@ function sendEmailMock(to, subject, body, options = {}) {
 async function sendEmail(to, subject, body, options = {}) {
   // Get from address from options or default from config
   const from = options.from || config.email.defaultFrom;
-  
+
+  const recipientValidation = validateRecipients(to);
+
+  if (!recipientValidation.isValid) {
+    const error = new Error(recipientValidation.error);
+    error.code = "INVALID_RECIPIENT";
+    error.invalidEmails = recipientValidation.invalidEmails;
+    console.error("Email validation failed:", error.message);
+    return Promise.reject(error);
+  }
+
+  // Validate sender email if provided in options
+  if (options.from && !validateEmailAddresses(options.from).isValid) {
+    const error = new Error(`Invalid sender email address: ${options.from}`);
+    error.code = "INVALID_SENDER";
+    console.error("Email validation failed:", error.message);
+    return Promise.reject(error);
+  }
+
   // Use mock implementation in development or mock mode
-  if (process.env.EMAIL_MODE === 'mock' || config.isDev) {
+  if (process.env.EMAIL_MODE === "mock" || config.isDev) {
     return sendEmailMock(to, subject, body, { ...options, from });
   }
-  
+
   // Initialize transporter if not already done
   if (!transporter) {
     transporter = initTransporter();
   }
-  
+
   try {
     // Send email using nodemailer
     const result = await transporter.sendMail({
       from: from,
-      to: to,
-      subject: subject,
-      text: body,
-      html: options.html || body
+      to: recipientValidation.recipients,
+      subject: subject || "Notification",
+      text: typeof body === "string" ? body : JSON.stringify(body),
+      html:
+        options.html ||
+        (typeof body === "string" ? body : JSON.stringify(body)),
     });
-    
+
     return {
       success: true,
-      messageId: result.messageId
+      messageId: result.messageId,
     };
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error("Failed to send email:", error);
     throw new Error(`Failed to send email: ${error.message}`);
   }
 }
 
 module.exports = {
   sendEmail,
+  validateRecipients, // Export for testing
 };

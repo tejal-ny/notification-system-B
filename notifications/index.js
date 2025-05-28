@@ -29,7 +29,9 @@ const notificationSystem = {
     console.log(`Sending ${type} notification to ${recipient}`);
 
     if (!notificationHandlers[type]) {
-      throw new Error(`Notification type '${type}' not supported`);
+      const error = new Error(`Notification type '${type}' not supported`);
+      error.code = "UNSUPPORTED_TYPE";
+      return Promise.reject(error);
     }
 
     try {
