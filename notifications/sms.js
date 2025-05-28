@@ -126,26 +126,26 @@ async function sendSms(to, message, options = {}) {
     throw error;
   }
 
-  try {
-    // Send SMS using Twilio
-    const result = await twilioClient.messages.create({
-      body: message,
-      from: fromNumber,
-      to: formattedNumber
-    });
+  // try {
+  //   // Send SMS using Twilio
+  //   const result = await twilioClient.messages.create({
+  //     body: message,
+  //     from: fromNumber,
+  //     to: formattedNumber
+  //   });
     
-    return {
-      success: true,
-      sid: result.sid,
-      status: result.status
-    };
-  } catch (error) {
-    console.error('Failed to send SMS:', error.message);
-    const smsError = new Error(`Failed to send SMS: ${error.message}`);
-    smsError.code = 'SMS_SEND_ERROR';
-    smsError.originalError = error;
-    throw smsError;
-  }
+  //   return {
+  //     success: true,
+  //     sid: result.sid,
+  //     status: result.status
+  //   };
+  // } catch (error) {
+  //   console.error('Failed to send SMS:', error.message);
+  //   const smsError = new Error(`Failed to send SMS: ${error.message}`);
+  //   smsError.code = 'SMS_SEND_ERROR';
+  //   smsError.originalError = error;
+  //   throw smsError;
+  // }
 }
 
 module.exports = {

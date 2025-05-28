@@ -9,8 +9,20 @@ const fs = require("fs");
 // Import notification modules
 const notificationSystem = require("./notifications");
 const {sendSms} = require('./notifications/sms');
+const dispatcher = require('./dispatcher');
+
 // Initialize the notification system
 console.log("Initializing notification system...");
+
+// Legacy function for backward compatibility
+function sendNotification(type, recipient, message, options = {}) {
+  if (!notifications[type]) {
+    throw new Error(`Notification type '${type}' is not supported`);
+  }
+  
+  return notifications[type].send(recipient, message, options);
+}
+
 
 // Example of sending notifications
 async function runExamples() {
@@ -122,10 +134,67 @@ async function main() {
   }
 }
 if (require.main === module) {
+  console.log('Notification System initialized');
+  console.log('Available notification types:', dispatcher.getSupportedTypes());
+    
+  // Example usage of the new dispatcher
+  if (process.argv[2] === 'test') {
+    console.log('Running test notifications...');
+    
+    // Example email notification
+    const emailNotification = {
+      type: 'email',
+      recipient: 'test@example.com',
+      message: 'This is a test email notification',
+      options: {
+        subject: 'Test Notification'
+      }
+    };
+    
+    // Example SMS notification
+    const smsNotification = {
+      type: 'sms',
+      recipient: '+15551234567',
+      message: 'This is a test SMS notification'
+    };
+    
+    // Example of unsupported type
+    const unsupportedNotification = {
+      type: 'fax', // Not supported
+      recipient: '555-123-4567',
+      message: 'This is a test fax notification'
+    };
+    
+    // Test dispatcher with email notification
+    console.log('Dispatching email notification...');
+    dispatcher.dispatchNotification(emailNotification)
+      .then(result => console.log('Email notification result:', result))
+      .catch(error => console.error('Email notification error:', error.message));
+    
+    // Test dispatcher with SMS notification
+    console.log('Dispatching SMS notification...');
+    dispatcher.dispatchNotification(smsNotification)
+      .then(result => console.log('SMS notification result:', result))
+      .catch(error => console.error('SMS notification error:', error.message));
+    
+    // Test dispatcher with unsupported notification type
+    console.log('Dispatching unsupported notification type...');
+    try {
+      dispatcher.dispatchNotification(unsupportedNotification);
+    } catch (error) {
+      console.error('Expected error with unsupported type:', error.message);
+    }
+  }
   console.log("Starting notification service with validation examples...");
   runExamples();
   main();
 }
 
-// Export notification functionality for use in other modules
-module.exports = notificationSystem;
+// Export all notification methods and the new dispatcher
+module.exports = {
+  // ...notifications,
+  sendNotification,
+  dispatch: dispatcher.dispatchNotification,
+  isNotificationTypeSupported: dispatcher.isTypeSupported,
+  getSupportedNotificationTypes: dispatcher.getSupportedTypes
+};

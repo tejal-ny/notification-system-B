@@ -185,6 +185,98 @@ notificationSystem.send(
   'Hello from the notification system!'
 );
 
+### Basic Usage
+
+```javascript
+const notifier = require('./index');
+
+// Send an email notification
+notifier.email.send('user@example.com', 'Hello from notification system!');
+
+// Send an SMS notification via Twilio
+notifier.sms.send('+1234567890', 'Your verification code is 123456');
+
+// Send a push notification
+notifier.push.send('device-token-123', 'You have a new message');
+```
+
+### Using the Parameter-Based Unified Interface
+
+```javascript
+const notifier = require('./index');
+
+// Send notifications through different channels using the same interface
+notifier.sendNotification('email', 'user@example.com', 'Welcome!');
+notifier.sendNotification('sms', '+1234567890', 'Your code: 123456');
+notifier.sendNotification('push', 'device-id', 'New message', { 
+  badge: 1,
+  sound: 'default'
+});
+```
+
+### Using the Object-Based Dispatcher
+
+The notification dispatcher accepts a notification object with type, recipient, message, and optional parameters:
+
+```javascript
+const notifier = require('./index');
+
+// Create notification objects
+const emailNotification = {
+  type: 'email',
+  recipient: 'user@example.com',
+  message: 'Welcome to our service!',
+  options: {
+    subject: 'Welcome Message',
+    from: 'noreply@example.com'
+  }
+};
+
+const smsNotification = {
+  type: 'sms',
+  recipient: '+1234567890',
+  message: 'Your verification code is 123456'
+};
+
+// Dispatch notifications
+notifier.dispatch(emailNotification)
+  .then(result => console.log('Email sent:', result))
+  .catch(error => console.error('Email error:', error.message));
+
+notifier.dispatch(smsNotification)
+  .then(result => console.log('SMS sent:', result))
+  .catch(error => console.error('SMS error:', error.message));
+```
+
+### Handling Unsupported Notification Types
+
+```javascript
+const notifier = require('./index');
+
+// Check if a notification type is supported
+if (notifier.isNotificationTypeSupported('email')) {
+  console.log('Email notifications are supported');
+}
+
+// Get all supported notification types
+console.log('Supported types:', notifier.getSupportedNotificationTypes());
+
+// Handle potential errors with try/catch or promises
+try {
+  const result = await notifier.dispatch({
+    type: 'unsupported-type',
+    recipient: 'someone',
+    message: 'Hello'
+  });
+} catch (error) {
+  console.error('Expected error for unsupported type:', error.message);
+  // Will output something like: "Notification type 'unsupported-type' is not supported.
+  // Supported types are: email, sms, push"
+}
+```
+
+### Complete Examples
+
 ## Setting Up the Project
 
 To create this project structure on your system:
