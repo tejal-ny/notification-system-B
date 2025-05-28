@@ -7,7 +7,27 @@
 
 const config = require('../config');
 const { validatePhoneNumber } = require('./validators');
+const twilio = require('twilio');
 
+
+// Load environment variables
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const senderNumber = process.env.TWILIO_PHONE_NUMBER;
+
+// Validate that all required environment variables are set
+const validateEnvVars = () => {
+  const requiredVars = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_PHONE_NUMBER'];
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  
+  if (missingVars.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missingVars.join(', ')}. ` +
+      'Please ensure these are set in your .env file or environment.'
+    );
+  }
+  return true;
+};
 // Initialize Twilio client if credentials are available
 let twilioClient;
 function initTwilioClient() {
@@ -32,7 +52,7 @@ function sendSmsMock(to, message) {
       console.log('-------------------------');
       console.log('📱 MOCK SMS SENT:');
       console.log(`To: ${to}`);
-      console.log(`From: ${config.sms.fromNumber}`);
+      console.log(`From: ${process.env.TWILIO_FROM_NUMBER}`);
       console.log('-------------------------');
       console.log(message);
       console.log('-------------------------');
@@ -66,7 +86,7 @@ async function sendSms(to, message, options = {}) {
   }
 
   const formattedNumber = validation.formattedNumber || to;
-  const fromNumber = options.from || config.sms.fromNumber;
+  const fromNumber = options.from || process.env.TWILIO_FROM_NUMBER;
   
   // Use mock implementation in development or mock mode
   if (process.env.SMS_MODE === 'mock' || config.isDev) {
@@ -85,6 +105,27 @@ async function sendSms(to, message, options = {}) {
     }
   }
   
+    try {
+    // Validate environment variables first
+    validateEnvVars();
+    
+    // Initialize the client with credentials from environment variables
+    const client = twilio(accountSid, authToken);
+    
+    // Send the SMS
+    const result = await client.messages.create({
+      body: message,
+      from: senderNumber,
+      to: to
+    });
+    
+    console.log(`SMS sent successfully! SID: ${result.sid}`);
+    return result;
+  } catch (error) {
+    console.error('Error sending SMS:', error.message);
+    throw error;
+  }
+
   try {
     // Send SMS using Twilio
     const result = await twilioClient.messages.create({

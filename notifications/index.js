@@ -20,6 +20,7 @@ const emailNotifier = require("./emails");
 // Store notification handlers
 const notificationHandlers = {
   [NOTIFICATION_TYPES.EMAIL]: emailNotifier.sendEmail,
+  [NOTIFICATION_TYPES.SMS]: smsNotifier.sendSms,
   // Other handlers will be added as implemented
 };
 
