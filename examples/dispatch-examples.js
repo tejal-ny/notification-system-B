@@ -59,8 +59,8 @@ function basicExamples() {
 /**
  * Example 2: Handling unsupported notification types
  */
-function errorHandlingExamples() {
-  console.log('\n------ Error Handling Examples ------');
+function validationAndErrorExamples() {
+  console.log('\n------ Validation and Error Handling Examples ------');
   
   // Unsupported notification type
   const faxNotification = {
@@ -74,6 +74,28 @@ function errorHandlingExamples() {
     type: 'email'
     // Missing recipient and message
   };
+  
+  // Invalid email format
+  const invalidEmailNotification = {
+    type: 'email',
+    recipient: 'not-an-email',  // Invalid email format
+    message: 'This email will fail validation'
+  };
+  
+  // Invalid phone number format
+  const invalidPhoneNotification = {
+    type: 'sms',
+    recipient: '555-123-4567',  // Not in E.164 format
+    message: 'This SMS will fail validation'
+  };
+  
+  // SMS with very long message
+  const longSmsNotification = {
+    type: 'sms',
+    recipient: '+15551234567',
+    message: 'This is a very long SMS message that exceeds the standard 160 character limit for a single SMS message. It will likely be split into multiple messages by the carrier, which could result in additional charges and message fragmentation. The dispatcher should warn about this.'
+  };
+  
   
   // Check if a type is supported before dispatching
   console.log('\nChecking if types are supported:');
@@ -92,6 +114,24 @@ function errorHandlingExamples() {
   notifier.dispatch(incompleteNotification)
     .then(result => console.log('This should not happen:', result))
     .catch(error => console.log('Expected error:', error.message));
+    
+  // Try to dispatch notification with invalid email
+  console.log('\nAttempting to dispatch notification with invalid email format...');
+  notifier.dispatch(invalidEmailNotification)
+    .then(result => console.log('Result with invalid email:', result))
+    .catch(error => console.log('Error:', error.message));
+  
+  // Try to dispatch notification with invalid phone number
+  console.log('\nAttempting to dispatch notification with invalid phone format...');
+  notifier.dispatch(invalidPhoneNotification)
+    .then(result => console.log('Result with invalid phone:', result))
+    .catch(error => console.log('Error:', error.message));
+  
+  // Try to dispatch SMS with very long message
+  console.log('\nAttempting to dispatch SMS with very long message...');
+  notifier.dispatch(longSmsNotification)
+    .then(result => console.log('Result with long SMS:', result))
+    .catch(error => console.log('Error:', error.message));
 }
 
 /**
@@ -156,8 +196,7 @@ async function runAllExamples() {
     // Slight delay to make output more readable
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    errorHandlingExamples();
-    
+    validationAndErrorExamples();
     // Slight delay to make output more readable
     await new Promise(resolve => setTimeout(resolve, 500));
     
@@ -174,7 +213,7 @@ if (require.main === module) {
 
 module.exports = {
   basicExamples,
-  errorHandlingExamples,
+  validationAndErrorExamples,
   dynamicTypeExample,
   runAllExamples
 };
