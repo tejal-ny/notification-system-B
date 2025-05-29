@@ -8,7 +8,7 @@
 const config = require('../config');
 const { validatePhoneNumber } = require('./validators');
 const twilio = require('twilio');
-
+const errorHandler = require('../error-handler');
 
 // Load environment variables
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -28,14 +28,37 @@ const validateEnvVars = () => {
   }
   return true;
 };
-// Initialize Twilio client if credentials are available
-let twilioClient;
-function initTwilioClient() {
-  if (config.sms.accountSid && config.sms.authToken) {
-    const twilio = require('twilio');
-    return twilio(config.sms.accountSid, config.sms.authToken);
+
+/**
+ * Initialize Twilio client with credentials from environment variables
+ * 
+ * @returns {Object} - Object containing client and error if any
+ */
+function getTwilioClient() {
+  // Validate environment variables before trying to use them
+  const validation = validateEnvVariables();
+  
+  if (!validation.success) {
+    return { client: null, error: validation.error };
   }
-  return null;
+  
+  try {
+    // Dynamically require Twilio to prevent errors if env vars are not set
+    const twilio = require('twilio');
+    
+    // Create and return the Twilio client with credentials from environment variables
+    const client = twilio(
+      process.env.TWILIO_ACCOUNT_SID,
+      process.env.TWILIO_AUTH_TOKEN
+    );
+    
+    return { client, error: null };
+  } catch (error) {
+    return { 
+      client: null, 
+      error: `Failed to initialize Twilio client: ${error.message}` 
+    };
+  }
 }
 
 /**
@@ -147,7 +170,107 @@ async function sendSms(to, message, options = {}) {
   //   throw smsError;
   // }
 }
+/**
+ * Internal implementation of SMS sending functionality
+ * 
+ * @param {string} recipient - Phone number of the recipient in E.164 format
+ * @param {string} message - The message to be sent
+ * @param {Object} options - Additional options for the SMS
+ * @returns {Promise<Object>} - Promise resolving to the result of the operation
+ * @throws {Error} - If something goes wrong during sending
+ */
+async function _sendSms(recipient, message, options = {}) {
+  // Get the Twilio client
+  const { client, error } = getTwilioClient();
+  
+  if (error) {
+    throw new Error(error);
+  }
+  
+  if (!client) {
+    throw new Error('SMS client initialization failed');
+  }
+  
+  // If we get here, we have a valid client
+  // Simulating potential errors that might occur
+  if (Math.random() < 0.1) {  // 10% chance of random error for demo purposes
+    throw new Error('Simulated SMS delivery failure');
+  }
+  
+  // Send the SMS using Twilio
+  const result = await client.messages.create({
+    body: message,
+    from: process.env.TWILIO_PHONE_NUMBER,
+    to: recipient,
+    ...options  // Allow passing additional Twilio options
+  });
+  
+  // Return a sanitized response
+  return {
+    channel: 'sms',
+    provider: 'twilio',
+    recipient,
+    messageId: result.sid,
+    timestamp: new Date(),
+    status: result.status,
+    success: true
+  };
+}
 
+/**
+ * Send an SMS notification using Twilio with error handling
+ * 
+ * @param {string} recipient - Phone number of the recipient in E.164 format
+ * @param {string} message - The message to be sent
+ * @param {Object} options - Additional options for the SMS
+ * @returns {Promise<Object>} - Promise resolving to the result of the operation
+ */
+async function send(recipient, message, options = {}) {
+  // Additional context information for logging
+  const contextInfo = {
+    messageLength: message ? message.length : 0,
+    hasOptions: options && Object.keys(options).length > 0,
+    timestamp: new Date().toISOString(),
+    fromNumber: process.env.TWILIO_PHONE_NUMBER || 'unknown'
+  };
+  
+  try {
+    // Log the attempt (without exposing full message content)
+    console.log(`[INFO] [channel=SMS] [recipient=${recipient}] Sending SMS of length ${contextInfo.messageLength}`);
+    
+    // Send the SMS
+    const result = await _sendSms(recipient, message, options);
+    
+    // Return the successful result
+    return {
+      ...result,
+      success: true
+    };
+  } catch (error) {
+    // Use the error handler to log the error with all context
+    // But make sure to sanitize the message to avoid logging sensitive content
+    return errorHandler.createErrorResponse(
+      'sms',
+      recipient,
+      error,
+      {
+        ...contextInfo,
+        messagePreview: message ? message.substring(0, 20) + '...' : null
+      }
+    );
+  }
+}
+
+// Create a wrapped version that includes error handling directly
+const sendWithErrorHandling = errorHandler.withErrorHandling(
+  _sendSms,
+  'sms',
+  null,  // recipient will be provided when called
+  { provider: 'twilio', source: 'sms_module' }
+);
 module.exports = {
-  sendSms
+  sendSms,
+  send,
+  sendWithErrorHandling,
+  validateEnvVars
 };

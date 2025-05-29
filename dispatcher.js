@@ -9,7 +9,7 @@
 // Import notification channels
 const notifications = require('./notifications');
 
-
+const errorHandler = require('./error-handler');
 
 /**
  * Validate an email address format
@@ -98,7 +98,8 @@ function validateNotification(type, recipient) {
 async function dispatchNotification(notification) {
   // Validate the notification object
   if (!notification) {
-    throw new Error('Notification object is required');
+    const error = 'Notification object is required';
+    return errorHandler.createErrorResponse('dispatcher', null, error);
   }
   
   const { type, recipient, message, options = {} } = notification;
@@ -115,10 +116,23 @@ async function dispatchNotification(notification) {
   if (!message) {
     throw new Error('Notification message is required');
   }
+
+   
+  // Truncate message for logging to avoid very large logs
+  const truncatedMessage = message 
+    ? (message.length > 20 ? `${message.substring(0, 20)}...` : message) 
+    : null;
   
   // Convert type to lowercase for case-insensitive comparison
-  const normalizedType = type.toLowerCase();
+const normalizedType = type ? type.toLowerCase() : null;
   
+  // Additional context for error logging
+  const contextInfo = {
+    notificationType: normalizedType,
+    messageLength: message ? message.length : 0,
+    hasOptions: options && Object.keys(options).length > 0
+  };
+
   // Check if the notification type is supported
   if (!notifications[normalizedType]) {
     throw new Error(
@@ -129,55 +143,142 @@ async function dispatchNotification(notification) {
   
  
   // Validate notification details based on type
-  const validation = validateNotification(normalizedType, recipient);
-  if (!validation.isValid) {
-    // Log the validation error but don't throw - we'll skip this notification
-    console.error(`[DISPATCHER] Validation error: ${validation.errorMessage}`);
+   // Validate notification based on its type
+  const validationResult = validateNotification(notification);
+  
+  if (!validationResult.isValid) {
+    // Use error handler to log validation error with context
+    return errorHandler.createErrorResponse(
+      normalizedType || 'unknown', 
+      recipient, 
+      validationResult.error,
+      {
+        ...contextInfo,
+        error: 'validation_failed',
+        messagePreview: truncatedMessage,
+        dispatched: false,
+        dispatchTimestamp: new Date()
+      }
+    );
+  }
+  
+  // Check if the notification type is supported
+  if (!notifications[normalizedType]) {
+    const error = `Notification type '${type}' is not supported. Supported types are: ${Object.keys(notifications).join(', ')}`;
     
-    // Return a result indicating validation failure
-    return {
-      type: normalizedType,
-      recipient,
-      status: 'validation_failed',
-      error: validation.errorMessage,
-      timestamp: new Date(),
-      dispatched: false
-    };
+    return errorHandler.createErrorResponse(
+      'dispatcher', 
+      recipient, 
+      error,
+      {
+        ...contextInfo,
+        error: 'unsupported_type',
+        messagePreview: truncatedMessage,
+        dispatched: false,
+        dispatchTimestamp: new Date()
+      }
+    );
   }
   
   try {
-    // Log the dispatch attempt
-    console.log(`[DISPATCHER] Sending ${normalizedType} notification to: ${recipient}`);
+    // Log the dispatch attempt (info level)
+    console.log(`[INFO] [channel=${normalizedType}] [recipient=${recipient}] Sending notification`);
     
-    // Validate message length based on notification type
-    if (normalizedType === 'sms' && message.length > 160) {
-      console.warn(`[DISPATCHER] SMS message exceeds 160 characters (${message.length}). May be sent as multiple messages.`);
+    // Dispatch to the appropriate notification service with error handling
+    const sendFunction = notifications[normalizedType].send;
+    
+    // Use safe execute to catch any errors during sending
+    const result = await errorHandler.safeExecute(
+      sendFunction, 
+      normalizedType,
+      recipient, 
+      [recipient, message, options],
+      contextInfo
+    );
+    
+    // Check if the result is an error response from safeExecute
+    if (result && result.success === false) {
+      // The error was already logged by safeExecute
+      return {
+        ...result,
+        type: normalizedType,
+        messagePreview: truncatedMessage,
+        dispatched: false,
+        dispatchTimestamp: new Date()
+      };
     }
     
-    // Dispatch to the appropriate notification service
-    const result = await notifications[normalizedType].send(recipient, message, options);
-    
-    // Add dispatch metadata to the result
+    // If we got here, the notification was sent successfully
     return {
       ...result,
+      success: true,
       dispatched: true,
       dispatchTimestamp: new Date()
     };
   } catch (error) {
-    // Handle errors from notification services
-    console.error(`[DISPATCHER] Error sending ${normalizedType} notification:`, error.message);
-    
-    // Return a result indicating dispatch failure (rather than throwing)
-    return {
-      type: normalizedType,
+    // This catch should rarely be triggered since safeExecute handles errors,
+    // but it's here as a failsafe for unexpected issues
+    return errorHandler.createErrorResponse(
+      normalizedType,
       recipient,
-      message: message.substring(0, 50) + (message.length > 50 ? '...' : ''), // Truncate for logging
-      status: 'dispatch_failed',
-      error: error.message,
-      timestamp: new Date(),
-      dispatched: false
-    };
+      `Unexpected error in dispatch: ${error.message}`,
+      {
+        ...contextInfo,
+        messagePreview: truncatedMessage,
+        dispatched: false,
+        dispatchTimestamp: new Date()
+      }
+    );
   }
+  // const validation = validateNotification(normalizedType, recipient);
+  // if (!validation.isValid) {
+  //   // Log the validation error but don't throw - we'll skip this notification
+  //   console.error(`[DISPATCHER] Validation error: ${validation.errorMessage}`);
+    
+  //   // Return a result indicating validation failure
+  //   return {
+  //     type: normalizedType,
+  //     recipient,
+  //     status: 'validation_failed',
+  //     error: validation.errorMessage,
+  //     timestamp: new Date(),
+  //     dispatched: false
+  //   };
+  // }
+  
+  // try {
+  //   // Log the dispatch attempt
+  //   console.log(`[DISPATCHER] Sending ${normalizedType} notification to: ${recipient}`);
+    
+  //   // Validate message length based on notification type
+  //   if (normalizedType === 'sms' && message.length > 160) {
+  //     console.warn(`[DISPATCHER] SMS message exceeds 160 characters (${message.length}). May be sent as multiple messages.`);
+  //   }
+    
+  //   // Dispatch to the appropriate notification service
+  //   const result = await notifications[normalizedType].send(recipient, message, options);
+    
+  //   // Add dispatch metadata to the result
+  //   return {
+  //     ...result,
+  //     dispatched: true,
+  //     dispatchTimestamp: new Date()
+  //   };
+  // } catch (error) {
+  //   // Handle errors from notification services
+  //   console.error(`[DISPATCHER] Error sending ${normalizedType} notification:`, error.message);
+    
+  //   // Return a result indicating dispatch failure (rather than throwing)
+  //   return {
+  //     type: normalizedType,
+  //     recipient,
+  //     message: message.substring(0, 50) + (message.length > 50 ? '...' : ''), // Truncate for logging
+  //     status: 'dispatch_failed',
+  //     error: error.message,
+  //     timestamp: new Date(),
+  //     dispatched: false
+  //   };
+  // }
 
   // try {
   //   // Log the dispatch attempt

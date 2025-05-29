@@ -8,6 +8,8 @@
 const nodemailer = require("nodemailer");
 const config = require("../config");
 const { validateEmailAddresses } = require("./validators");
+// Import error handler
+const errorHandler = require('../error-handler');
 // Validate email configuration on module load
 config.validateConfig();
 
@@ -141,7 +143,92 @@ async function sendEmail(to, subject, body, options = {}) {
   }
 }
 
+
+/**
+ * Internal implementation of email sending functionality
+ * @param {string} recipient - Email address of the recipient
+ * @param {string} message - The message to be sent
+ * @param {Object} options - Additional options for the email
+ * @returns {Promise<Object>} - Promise resolving to the result of the operation
+ */
+async function _sendEmail(recipient, message, options = {}) {
+  // This function contains the actual email sending logic
+  // In a real implementation, this would use an email service/library like nodemailer
+  
+  // Simulating potential errors that might occur
+  if (Math.random() < 0.1) {  // 10% chance of random error for demo purposes
+    throw new Error('Simulated email delivery failure');
+  }
+  
+  // Simulate sending delay
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // Log success (this would be removed in production)
+  console.log(`[EMAIL] Successfully sent to: ${recipient}`);
+  
+  // Return success result
+  return {
+    channel: 'email',
+    recipient,
+    messageId: `email_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    timestamp: new Date(),
+    status: 'sent',
+    success: true
+  };
+}
+
+/**
+ * Send an email notification with error handling
+ * @param {string} recipient - Email address of the recipient
+ * @param {string} message - The message to be sent
+ * @param {Object} options - Additional options for the email
+ * @returns {Promise<Object>} - Promise resolving to the result of the operation
+ */
+async function send(recipient, message, options = {}) {
+  // Additional context information for logging
+  const contextInfo = {
+    subject: options.subject || '[No Subject]',
+    messageLength: message ? message.length : 0,
+    hasAttachments: options.attachments ? true : false,
+    timestamp: new Date().toISOString()
+  };
+  
+  try {
+    // Log the attempt
+    console.log(`[INFO] [channel=EMAIL] [recipient=${recipient}] Sending email "${contextInfo.subject}"`);
+    
+    // Send the email
+    const result = await _sendEmail(recipient, message, options);
+    
+    // Return the successful result
+    return {
+      ...result,
+      success: true
+    };
+  } catch (error) {
+    // Use the error handler to log the error with all context
+    return errorHandler.createErrorResponse(
+      'email',
+      recipient,
+      error,
+      {
+        ...contextInfo,
+        messagePreview: message ? message.substring(0, 50) + '...' : null
+      }
+    );
+  }
+}
+
+// Create a wrapped version that includes error handling directly
+const sendWithErrorHandling = errorHandler.withErrorHandling(
+  _sendEmail,
+  'email',
+  null,  // recipient will be provided when called
+  { source: 'email_module' }
+);
 module.exports = {
   sendEmail,
+  send,
+  sendWithErrorHandling,
   validateRecipients, // Export for testing
 };
