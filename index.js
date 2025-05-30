@@ -13,6 +13,7 @@ const dispatcher = require('./dispatcher');
 const logger = require('./logger');
 const initializeNewUser = require('./user-preferences').initializeNewUser;
 const updateExistingUserPreferences = require('./user-preferences').updateExistingUserPreferences;
+const getOrCreateUserPreferences = require('./user-preferences').getOrCreateUserPreferences;
 // Initialize the notification system
 console.log("Initializing notification system...");
 
@@ -125,10 +126,11 @@ async function sendExampleEmails() {
 // Example usage
 async function main() {
   // initializeNewUser("tejal@example.com");
-  updateExistingUserPreferences("tejal@example.com", {
-    email: false,
-    sms: true
-  });
+  getOrCreateUserPreferences("tejal@example.com");
+  // updateExistingUserPreferences("tejal@example.com", {
+  //   email: false,
+  //   sms: true
+  // });
   // try {
   //   const recipientNumber = '+1234567890';
   //   const message = 'Hello! This is a test message.';

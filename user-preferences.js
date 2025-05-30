@@ -519,6 +519,64 @@ function updateExistingUserPreferences(userId, preferences) {
     
     return updatedPrefs;
   }
+
+  /**
+ * Get preferences for a specific user
+ * 
+ * @param {string} userId - User ID or email
+ * @returns {Object|null} User preferences or null if invalid userId
+ */
+function getUserPreferences(userId) {
+    // Validate user ID
+    if (!isValidUserId(userId)) {
+      console.error(`Invalid user ID: ${userId}`);
+      return null;
+    }
+    
+    // Return existing preferences or create default
+    return preferencesStore[userId] || createDefaultPreferences();
+  }
+  
+  /**
+   * Get or create user preferences - ensures a user always has valid preferences
+   * 
+   * This function retrieves a user's preferences, or automatically initializes 
+   * default preferences if they don't exist yet. This ensures that all users
+   * have valid preference settings when queried.
+   *
+   * @param {string} userId - User ID or email
+   * @param {Object} [defaultOverrides={}] - Optional overrides for default values
+   * @returns {Object|{error: string}} User preferences or error object if invalid userId
+   */
+  function getOrCreateUserPreferences(userId, defaultOverrides = {}) {
+    // Validate user ID
+    if (!isValidUserId(userId)) {
+      const error = `Invalid user ID: ${userId}`;
+      console.error(error);
+      return { error };
+    }
+    
+    // Check if user already exists in preferences
+    if (preferencesStore[userId]) {
+      // Return existing preferences
+      return preferencesStore[userId];
+    }
+    
+    // User doesn't exist, create default preferences
+    console.log(`User ${userId} not found. Creating default preferences.`);
+    
+    // Create default preferences with any provided overrides
+    const newPreferences = createDefaultPreferences(defaultOverrides);
+    
+    // Store in preferences store
+    preferencesStore[userId] = newPreferences;
+    
+    // Persist to file
+    savePreferences();
+    
+    // Return the newly created preferences
+    return newPreferences;
+  }
   
 
   module.exports = {
@@ -527,5 +585,6 @@ function updateExistingUserPreferences(userId, preferences) {
     initializeNewUser,
     // updateNotificationPreferences,
     initializeNewUserWithAllEnabled,
-    updateExistingUserPreferences
+    updateExistingUserPreferences,
+    getOrCreateUserPreferences
   };
