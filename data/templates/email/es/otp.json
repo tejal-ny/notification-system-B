@@ -1,0 +1,4 @@
+{
+  "subject": "Tu código de verificación de {{serviceName}}",
+  "body": "Hola {{userName}},\n\nTu código de verificación para {{serviceName}} es: {{otpCode}}\n\nEste código caducará en {{expiryTime}} minutos.\n\nSi no solicitaste este código, ignora este correo electrónico.\n\nSaludos cordiales,\nEl Equipo de {{serviceName}}"
+}

@@ -22,6 +22,7 @@ const notificationTemplates = require('./notificationTemplates').notificationTem
 const renderTemplate = require('./notificationTemplates').renderTemplate;
 const sendNotificationWithTemplate = require('./notificationTemplates').sendNotificationWithTemplate;
 const renderTemplateByLanguage = require('./notificationTemplates').renderTemplateByLanguage;
+const templateManager = require('./templateManager');
 // Initialize the notification system
 console.log("Initializing notification system...");
 
@@ -133,19 +134,25 @@ async function sendExampleEmails() {
 
 // Example usage
 async function main() {
-  const userData = {
-    userName: "John Smith",
-    serviceName: "CloudApp",
-    verificationLink: "https://cloudapp.com/verify?token=abc123"
-  };
-  const result = renderTemplateByLanguage(
-    notificationTemplates,
-    'email',
-    'welcome',
-    'ja',  // Japanese (not available)
-    userData
-  );
-  console.log("Fallback to English:", result.subject);
+  console.log('EXAMPLE 1: Basic Template Retrieval\n');
+  
+  // Get an email template in English
+  const emailTemplate = templateManager.getTemplate('email', 'welcome', 'en');
+  console.log('Email template (welcome, en):');
+  console.log('- Subject:', emailTemplate.subject);
+  console.log('- First line of body:', emailTemplate.body.split('\n')[0]);
+  console.log();
+  
+  // Get an SMS template in Spanish
+  const smsTemplate = templateManager.getTemplate('sms', 'welcome', 'es');
+  console.log('SMS template (welcome, es):');
+  console.log(smsTemplate);
+  console.log();
+  
+  // Attempt to get a template in French, but use a name that doesn't exist
+  const nonExistentTemplate = templateManager.getTemplate('email', 'non-existent', 'fr');
+  console.log('Non-existent template result:', nonExistentTemplate);
+  console.log();
   // initializeNewUser("tejal@example.com");
   // getUserPreferences("tejal1@example.com")
   // getChannelOptedInUsers('email')
