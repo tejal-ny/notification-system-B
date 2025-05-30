@@ -324,15 +324,88 @@ function getSupportedTypes() {
   return Object.keys(notifications);
 }
 
-module.exports = {
-  dispatchNotification,
-  isTypeSupported,
-  getSupportedTypes,
-  // Export validation functions for testing
-  validateEmail,
-  validatePhoneNumber,
-  validateNotification
-};
+async function sendNotificationsToTargetedUsers(message, options = {}) {
+  // Ensure preferences are loaded
+  if (!userPreferences.loaded) {
+    await userPreferences.load();
+  }
+  
+  const results = {
+    email: { sent: 0, skipped: 0 },
+    sms: { sent: 0, skipped: 0 },
+    errors: []
+  };
+  
+  // Get all user preferences
+  const users = userPreferences.getAllPreferences();
+  
+  // Send notifications based on user preferences
+  for (const user of users) {
+    // Send email if enabled
+    if (user.emailEnabled) {
+      try {
+        const emailResult = await notifier.sendEmail(
+          user.userId, 
+          message,
+          options.emailOptions || {}
+        );
+        
+        if (emailResult.dispatched) {
+          results.email.sent++;
+        } else {
+          results.email.skipped++;
+          results.errors.push({
+            userId: user.userId,
+            type: 'email',
+            error: emailResult.error
+          });
+        }
+      } catch (error) {
+        results.email.skipped++;
+        results.errors.push({
+          userId: user.userId,
+          type: 'email',
+          error: error.message
+        });
+      }
+    } else {
+      results.email.skipped++;
+    }
+    
+    // Send SMS if enabled and phone number exists
+    if (user.smsEnabled && user.phoneNumber) {
+      try {
+        const smsResult = await notifier.sendSMS(
+          user.phoneNumber,
+          message,
+          options.smsOptions || {}
+        );
+        
+        if (smsResult.dispatched) {
+          results.sms.sent++;
+        } else {
+          results.sms.skipped++;
+          results.errors.push({
+            userId: user.userId,
+            type: 'sms',
+            error: smsResult.error
+          });
+        }
+      } catch (error) {
+        results.sms.skipped++;
+        results.errors.push({
+          userId: user.userId,
+          type: 'sms',
+          error: error.message
+        });
+      }
+    } else {
+      results.sms.skipped++;
+    }
+  }
+  
+  return results;
+}
 
 module.exports = {
   dispatchNotification,
@@ -344,5 +417,6 @@ module.exports = {
   // getErrorLog,
   // clearErrorLog,
   getNotificationLog: logger.getNotificationLog,
-  clearNotificationLog: logger.clearNotificationLog
+  clearNotificationLog: logger.clearNotificationLog,
+  sendNotificationsToTargetedUsers
 };
