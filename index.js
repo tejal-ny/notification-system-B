@@ -17,6 +17,7 @@ const getOrCreateUserPreferences = require('./user-preferences').getOrCreateUser
 const initializeUsersWithDefaultPreferences = require('./user-preferences').initializeUsersWithDefaultPreferences;
 const toggleChannelPreference = require('./user-preferences').toggleChannelPreference;
 const getChannelOptedInUsers = require('./user-preferences').getChannelOptedInUsers;
+const getUserPreferences = require('./user-preferences').getUserPreferences;
 // Initialize the notification system
 console.log("Initializing notification system...");
 
@@ -129,7 +130,8 @@ async function sendExampleEmails() {
 // Example usage
 async function main() {
   // initializeNewUser("tejal@example.com");
-  getChannelOptedInUsers('email')
+  getUserPreferences("tejal1@example.com")
+  // getChannelOptedInUsers('email')
   // toggleChannelPreference('tejal1@example.com', 'email');
   // initializeUsersWithDefaultPreferences(['tejal1@example.com', 'tejal2@example.com'])
   // updateExistingUserPreferences("tejal@example.com", {

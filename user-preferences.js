@@ -295,7 +295,8 @@ function createDefaultPreferences() {
       emailEnabled: true,  // Default to opt-in for email
       smsEnabled: false,   // Default to opt-out for SMS (requires explicit opt-in)
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      isDeleted: false,
     };
   }
   
@@ -311,7 +312,8 @@ function createCustomDefaultPreferences(emailEnabled = true, smsEnabled = true) 
       emailEnabled: emailEnabled === true,
       smsEnabled: smsEnabled === true,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      isDeleted: false,
     };
   }
 
@@ -518,23 +520,6 @@ function updateExistingUserPreferences(userId, preferences) {
     savePreferences();
     
     return updatedPrefs;
-  }
-
-  /**
- * Get preferences for a specific user
- * 
- * @param {string} userId - User ID or email
- * @returns {Object|null} User preferences or null if invalid userId
- */
-function getUserPreferences(userId) {
-    // Validate user ID
-    if (!isValidUserId(userId)) {
-      console.error(`Invalid user ID: ${userId}`);
-      return null;
-    }
-    
-    // Return existing preferences or create default
-    return preferencesStore[userId] || createDefaultPreferences();
   }
   
   /**
@@ -767,6 +752,253 @@ function getChannelOptedInUsers(channel) {
     
     return optedInUsers;
   }
+
+  /**
+ * Remove a user's preferences (hard delete)
+ * 
+ * This function completely removes a user's data from the store.
+ * For soft deletion, use softDeleteUserPreferences instead.
+ * 
+ * @param {string} userId - User ID or email
+ * @returns {boolean} Whether the removal was successful
+ */
+function removeUserPreferences(userId) {
+    // Validate user ID
+    if (!isValidUserId(userId) || !preferencesStore[userId]) {
+      return false;
+    }
+    
+    // Remove from store
+    delete preferencesStore[userId];
+    
+    // Persist changes
+    return savePreferences();
+  }
+  
+  /**
+   * Soft delete a user's preferences
+   * 
+   * This marks a user as deleted without actually removing their data.
+   * Functions that retrieve user preferences will ignore soft-deleted users.
+   * 
+   * @param {string} userId - User ID or email
+   * @returns {boolean} Whether the soft deletion was successful
+   */
+  function softDeleteUserPreferences(userId) {
+    // Validate user ID
+    if (!isValidUserId(userId)) {
+      console.error(`Invalid user ID: ${userId}`);
+      return false;
+    }
+    
+    // Check if user exists
+    if (!preferencesStore[userId]) {
+      console.error(`User not found: ${userId}`);
+      return false;
+    }
+    
+    // Mark as deleted and update timestamp
+    preferencesStore[userId].isDeleted = true;
+    preferencesStore[userId].updatedAt = new Date().toISOString();
+    
+    console.log(`User ${userId} has been soft deleted`);
+    
+    // Persist changes
+    return savePreferences();
+  }
+  
+  /**
+   * Restore a soft-deleted user's preferences
+   * 
+   * This unmarks a user as deleted, making them visible in retrieval functions again.
+   * 
+   * @param {string} userId - User ID or email
+   * @returns {boolean} Whether the restoration was successful
+   */
+  function restoreUserPreferences(userId) {
+    // Validate user ID
+    if (!isValidUserId(userId)) {
+      console.error(`Invalid user ID: ${userId}`);
+      return false;
+    }
+    
+    // Check if user exists
+    if (!preferencesStore[userId]) {
+      console.error(`User not found: ${userId}`);
+      return false;
+    }
+    
+    // Make sure user was actually deleted
+    if (preferencesStore[userId].isDeleted !== true) {
+      console.log(`User ${userId} was not deleted, no restoration needed`);
+      return true;
+    }
+    
+    // Remove deletion flag and update timestamp
+    preferencesStore[userId].isDeleted = false;
+    preferencesStore[userId].updatedAt = new Date().toISOString();
+    
+    console.log(`User ${userId} has been restored`);
+    
+    // Persist changes
+    return savePreferences();
+  }
+
+  /**
+ * Get preferences for a specific user, creating default preferences if user doesn't exist
+ * 
+ * If the user doesn't exist in the preferences data, this function will automatically
+ * initialize them with default preferences and persist this to the JSON file.
+ * If the user exists but is soft-deleted, behavior depends on the includeDeleted parameter.
+ * 
+ * @param {string} userId - User ID or email
+ * @param {Object} [defaultOverrides={}] - Override default values if creating new user
+ * @param {boolean} [includeDeleted=false] - Whether to include soft-deleted users
+ * @returns {Object|null} User preferences or null if invalid userId or user is deleted
+ */
+function getUserPreferences(userId, defaultOverrides = {}, includeDeleted = false) {
+    // Validate user ID
+    if (!isValidUserId(userId)) {
+      console.error(`Invalid user ID: ${userId}`);
+      return null;
+    }
+    
+    // Check if user exists in the preferences store
+    if (!preferencesStore[userId]) {
+      // User doesn't exist - create default preferences
+      console.log(`Creating default preferences for new user: ${userId}`);
+      
+      // Create default preferences with any overrides
+      const defaultPrefs = createDefaultPreferences(defaultOverrides);
+      
+      // Store in preferences store
+      preferencesStore[userId] = defaultPrefs;
+      
+      // Persist to file
+      savePreferences();
+      
+      console.log(`Default preferences created and saved for: ${userId}`);
+    } else if (preferencesStore[userId].isDeleted === true && !includeDeleted) {
+      // User exists but is soft-deleted and we are not including deleted users
+      console.log(`User ${userId} is marked as deleted and includeDeleted=false`);
+      return null;
+    }
+    
+    // Return existing (or newly created) preferences
+    return preferencesStore[userId];
+  }
+
+  /**
+ * Check if a user has opted in to a specific notification channel
+ * 
+ * This function respects soft deletion by default - deleted users are considered
+ * not opted in to any channel unless includeDeleted is set to true.
+ * 
+ * @param {string} userId - User ID or email
+ * @param {string} channel - Notification channel ('email' or 'sms')
+ * @param {boolean} [includeDeleted=false] - Whether to include soft-deleted users
+ * @returns {boolean} Whether the user has opted in
+ */
+function hasUserOptedIn(userId, channel, includeDeleted = false) {
+    // Default response if invalid input
+    if (!isValidUserId(userId) || !channel) {
+      return false;
+    }
+    
+    // Get user preferences (respects soft deletion based on includeDeleted parameter)
+    const preferences = getUserPreferences(userId, {}, includeDeleted);
+    
+    // If preferences is null (which can happen if user is deleted and includeDeleted=false)
+    if (!preferences) {
+      return false;
+    }
+    
+    // Check the appropriate preference based on channel
+    switch (channel.toLowerCase()) {
+      case 'email':
+        return preferences.emailEnabled === true;
+      case 'sms':
+        return preferences.smsEnabled === true;
+      default:
+        console.error(`Unknown notification channel: ${channel}`);
+        return false;
+    }
+  }
+
+  /**
+ * Get a list of user IDs who have opted in to a specific notification channel
+ * 
+ * By default, this function excludes soft-deleted users from the results.
+ * 
+ * @param {string} channel - Notification channel ('email' or 'sms')
+ * @param {boolean} [includeDeleted=false] - Whether to include soft-deleted users
+ * @returns {string[]} Array of user IDs who have opted in to the specified channel
+ */
+function getUsersOptedInToChannel(channel, includeDeleted = false) {
+    // Validate channel parameter
+    if (!channel || typeof channel !== 'string') {
+      console.error('Invalid channel parameter');
+      return [];
+    }
+  
+    // Normalize channel name to lowercase
+    const normalizedChannel = channel.toLowerCase();
+    
+    // Validate that channel is supported
+    if (normalizedChannel !== 'email' && normalizedChannel !== 'sms') {
+      console.error(`Unsupported notification channel: ${channel}`);
+      return [];
+    }
+  
+    // Determine which preference field to check
+    const preferenceField = normalizedChannel === 'email' ? 'emailEnabled' : 'smsEnabled';
+    
+    // Filter users who have opted in to the specified channel
+    // Also filter out soft-deleted users unless includeDeleted is true
+    const optedInUsers = Object.entries(preferencesStore)
+      .filter(([userId, preferences]) => {
+        // Check if the user has opted in to the channel
+        const hasOptedIn = preferences[preferenceField] === true;
+        
+        // Check if the user is not deleted or if we're including deleted users
+        const isVisibleUser = !preferences.isDeleted || includeDeleted;
+        
+        // Return true only if both conditions are met
+        return hasOptedIn && isVisibleUser;
+      })
+      .map(([userId]) => userId);
+    
+    const deletionStatus = includeDeleted ? '(including deleted)' : '(excluding deleted)';
+    console.log(`Found ${optedInUsers.length} users opted in to ${normalizedChannel} notifications ${deletionStatus}`);
+    
+    return optedInUsers;
+  }
+  
+  /**
+ * Get all user preferences
+ * 
+ * By default, this excludes soft-deleted users from the results.
+ * 
+ * @param {boolean} [includeDeleted=false] - Whether to include soft-deleted users
+ * @returns {Object} All user preferences (filtered by deletion status if specified)
+ */
+function getAllPreferences(includeDeleted = false) {
+    if (includeDeleted) {
+      // Return all preferences including deleted users
+      return { ...preferencesStore };
+    } else {
+      // Filter out soft-deleted users
+      const filteredPreferences = {};
+      
+      Object.entries(preferencesStore).forEach(([userId, preferences]) => {
+        if (!preferences.isDeleted) {
+          filteredPreferences[userId] = preferences;
+        }
+      });
+      
+      return filteredPreferences;
+    }
+  }
   
 
   module.exports = {
@@ -779,5 +1011,12 @@ function getChannelOptedInUsers(channel) {
     getOrCreateUserPreferences,
     initializeUsersWithDefaultPreferences,
     toggleChannelPreference,
-    getChannelOptedInUsers
+    getChannelOptedInUsers,
+    restoreUserPreferences,
+    removeUserPreferences,
+    softDeleteUserPreferences,
+    getUserPreferences,
+    hasUserOptedIn,
+    getUsersOptedInToChannel,
+    getAllPreferences
   };
