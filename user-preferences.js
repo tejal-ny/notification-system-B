@@ -577,7 +577,76 @@ function getUserPreferences(userId) {
     // Return the newly created preferences
     return newPreferences;
   }
+
+  /**
+ * Initialize default preferences for multiple users
+ * 
+ * This function accepts an array of user IDs and initializes default preferences
+ * for each user who doesn't already have preferences saved. It skips users
+ * who already have existing preferences.
+ * 
+ * @param {string[]} userIds - Array of user IDs to initialize
+ * @param {Object} [defaultOverrides={}] - Optional overrides for default values
+ * @returns {Object} Result object with success and failure counts
+ */
+function initializeUsersWithDefaultPreferences(userIds, defaultOverrides = {}) {
+    // Validate input
+    if (!Array.isArray(userIds)) {
+      console.error('Expected an array of user IDs');
+      return { 
+        success: false, 
+        initialized: 0, 
+        skipped: 0, 
+        invalid: 0,
+        totalProcessed: 0
+      };
+    }
   
+    // Initialize counters for the result
+    const result = {
+      success: true,
+      initialized: 0,   // Count of users who were newly initialized
+      skipped: 0,       // Count of users who already had preferences
+      invalid: 0,       // Count of invalid user IDs
+      totalProcessed: userIds.length
+    };
+  
+    // Process each user ID
+    for (const userId of userIds) {
+      // Skip invalid user IDs but count them
+      if (!isValidUserId(userId)) {
+        console.error(`Skipping invalid user ID: ${userId}`);
+        result.invalid++;
+        continue;
+      }
+  
+      // Check if user already has preferences
+      if (preferencesStore[userId]) {
+        console.log(`User ${userId} already has preferences - skipping`);
+        result.skipped++;
+        continue;
+      }
+  
+      // User doesn't exist yet - create new preferences
+      const defaultPrefs = createDefaultPreferences(defaultOverrides);
+      
+      // Store in preferences store
+      preferencesStore[userId] = defaultPrefs;
+      
+      console.log(`Default preferences created for: ${userId}`);
+      result.initialized++;
+    }
+  
+    // Only save to file if we actually initialized any users
+    if (result.initialized > 0) {
+      if (!savePreferences()) {
+        result.success = false;
+        console.error('Failed to save preferences to file');
+      }
+    }
+  
+    return result;
+  }
 
   module.exports = {
     createCustomDefaultPreferences,
@@ -586,5 +655,6 @@ function getUserPreferences(userId) {
     // updateNotificationPreferences,
     initializeNewUserWithAllEnabled,
     updateExistingUserPreferences,
-    getOrCreateUserPreferences
+    getOrCreateUserPreferences,
+    initializeUsersWithDefaultPreferences
   };
