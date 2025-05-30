@@ -32,46 +32,59 @@ const notificationTemplates = {
     }
   };
   
-  /**
+/**
  * Renders a template string by replacing placeholders with values from a data object
  * 
- * @param {string} template - The template string containing placeholders in {{key}} format
- * @param {Object} data - Object with keys matching the placeholder names and values to replace them with
- * @param {Object} [options] - Optional configuration object
- * @param {boolean} [options.keepMissingPlaceholders=false] - If true, placeholders without matching data will be left as is
+ * @param {string} template - The template string containing placeholders like {{key}}
+ * @param {object} data - An object containing key-value pairs for replacement
+ * @param {boolean} [logWarnings=true] - Whether to log warnings for missing values
  * @returns {string} The rendered template with all placeholders replaced
  */
-function renderTemplate(template, data, options = {}) {
-    // Default options
-    const { keepMissingPlaceholders = false } = options;
-    
-    // If template is not a string or data is not an object, return the original template
-    if (typeof template !== 'string' || !data || typeof data !== 'object') {
-      return template;
-    }
-  
-    // Create a copy of the template string to modify
+function renderTemplate(template, data, logWarnings = true) {
+    // Start with the original template
     let renderedTemplate = template;
     
-    // Use a regular expression to find all {{placeholder}} patterns
-    const placeholderPattern = /{{([^{}]+)}}/g;
+    // Check if inputs are valid
+    if (typeof template !== 'string' || !data || typeof data !== 'object') {
+      throw new Error('Invalid arguments: template must be a string and data must be an object');
+    }
+    
+    // Find all placeholders in the template
+    const placeholderRegex = /{{([^{}]+)}}/g;
+    const placeholders = new Set();
+    let match;
+    
+    // Extract all placeholders from the template
+    while ((match = placeholderRegex.exec(template)) !== null) {
+      placeholders.add(match[1]);
+    }
     
     // Replace each placeholder with its corresponding value from the data object
-    renderedTemplate = renderedTemplate.replace(placeholderPattern, (match, placeholderKey) => {
-      // Trim any whitespace from the placeholder key
-      const key = placeholderKey.trim();
-      
-      // Check if the key exists in the data object
-      if (key in data) {
-        // If the value is null or undefined, return an empty string
-        return data[key] === null || data[key] === undefined ? '' : String(data[key]);
+    for (const key in data) {
+      // Only process properties directly on the object (not from prototype)
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        // Create a regex to find all instances of the placeholder
+        const placeholder = new RegExp(`{{${key}}}`, 'g');
+        
+        // Convert value to string (in case it's a number or other type)
+        const value = data[key] !== null && data[key] !== undefined ? String(data[key]) : '';
+        
+        // Replace all occurrences of the placeholder with the value
+        renderedTemplate = renderedTemplate.replace(placeholder, value);
+        
+        // Remove this key from the placeholders set as it's been handled
+        placeholders.delete(key);
       }
-      
-      // If keepMissingPlaceholders is true, return the original placeholder
-      // Otherwise, return an empty string
-      return keepMissingPlaceholders ? match : '';
-    });
+    }
     
+    // Log warnings for any placeholders that weren't replaced
+    if (logWarnings && placeholders.size > 0) {
+      placeholders.forEach(key => {
+        console.warn(`Warning: No value provided for placeholder '${key}' in template`);
+      });
+    }
+    
+    // Return the rendered template (which may still contain some unreplaced placeholders)
     return renderedTemplate;
   }
 

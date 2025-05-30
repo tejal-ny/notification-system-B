@@ -135,7 +135,7 @@ async function main() {
     userName: "Jane Doe",
     serviceName: "CloudApp",
     verificationLink: "https://cloudapp.com/verify?token=xyz789",
-    supportEmail: "help@cloudapp.com",
+    // supportEmail: "help@cloudapp.com",
   };
 
   const welcomeEmailSubject = renderTemplate(notificationTemplates.email.welcome.subject, emailData);
@@ -148,7 +148,7 @@ async function main() {
     serviceName: "CloudApp",
     userName: "Jane",
     verificationCode: "472913",
-    expiryTime: "15"
+    // expiryTime: "15"
   };
 
   const verificationSMS = renderTemplate(notificationTemplates.sms.verification, smsData);
