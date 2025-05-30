@@ -1,14 +1,8 @@
 {
   "tejal1@example.com": {
-    "emailEnabled": true,
+    "emailEnabled": false,
     "smsEnabled": false,
-    "createdAt": "2025-05-30T06:37:31.472Z",
-    "updatedAt": "2025-05-30T06:37:31.482Z"
-  },
-  "tejal2@example.com": {
-    "emailEnabled": true,
-    "smsEnabled": false,
-    "createdAt": "2025-05-30T06:37:31.482Z",
-    "updatedAt": "2025-05-30T06:37:31.482Z"
+    "createdAt": "2025-05-30T06:47:52.849Z",
+    "updatedAt": "2025-05-30T06:47:52.849Z"
   }
 }

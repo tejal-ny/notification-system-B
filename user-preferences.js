@@ -648,6 +648,84 @@ function initializeUsersWithDefaultPreferences(userIds, defaultOverrides = {}) {
     return result;
   }
 
+  /**
+ * Toggle a notification channel preference for a specific user
+ * 
+ * This function flips the current boolean value for the specified channel
+ * (email or sms) from true to false or vice versa.
+ * 
+ * @param {string} userId - User ID or email
+ * @param {string} channel - Notification channel ('email' or 'sms')
+ * @returns {Object|null} Updated preferences or null if failed
+ */
+function toggleChannelPreference(userId, channel) {
+    // Validate user ID
+    if (!isValidUserId(userId)) {
+      console.error(`Invalid user ID: ${userId}`);
+      return null;
+    }
+    
+    // Validate channel
+    if (!channel || (channel.toLowerCase() !== 'email' && channel.toLowerCase() !== 'sms')) {
+      console.error(`Invalid channel: ${channel}. Must be 'email' or 'sms'`);
+      return null;
+    }
+    
+    // Get current preferences
+    const currentPrefs = getUserPreferences(userId);
+    
+    // Prepare update object
+    const updates = {};
+    
+    // Toggle the appropriate channel preference
+    switch (channel.toLowerCase()) {
+      case 'email':
+        updates.emailEnabled = !currentPrefs.emailEnabled;
+        break;
+      case 'sms':
+        updates.smsEnabled = !currentPrefs.smsEnabled;
+        break;
+    }
+    
+    // Log the change
+    console.log(`Toggling ${channel} preference for ${userId}: ${currentPrefs[`${channel.toLowerCase()}Enabled`]} → ${updates[`${channel.toLowerCase()}Enabled`]}`);
+    
+    // Apply the update
+    return updateUserPreferences(userId, updates);
+  }
+
+  function updateUserPreferences(userId, updates) {
+      // Validate user ID
+      if (!isValidUserId(userId)) {
+        console.error(`Invalid user ID: ${userId}`);
+        return null;
+      }
+
+      // Ensure updates is an object
+      if (!updates || typeof updates !== 'object') {
+        console.error('Updates must be an object');
+        return null;
+      }
+
+      // Get current preferences or defaults
+      const currentPrefs = getUserPreferences(userId);
+
+      // Apply updates
+      const updatedPrefs = {
+        ...currentPrefs,
+        ...updates,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Store updated preferences
+      preferencesStore[userId] = updatedPrefs;
+
+      // Persist to file
+      savePreferences();
+
+      return updatedPrefs;
+    }
+
   module.exports = {
     createCustomDefaultPreferences,
     createDefaultPreferences,
@@ -656,5 +734,6 @@ function initializeUsersWithDefaultPreferences(userIds, defaultOverrides = {}) {
     initializeNewUserWithAllEnabled,
     updateExistingUserPreferences,
     getOrCreateUserPreferences,
-    initializeUsersWithDefaultPreferences
+    initializeUsersWithDefaultPreferences,
+    toggleChannelPreference
   };
