@@ -10,7 +10,7 @@ const fs = require("fs");
 const notificationSystem = require("./notifications");
 const {sendSms} = require('./notifications/sms');
 const dispatcher = require('./dispatcher');
-
+const logger = require('./logger');
 // Initialize the notification system
 console.log("Initializing notification system...");
 
@@ -196,5 +196,22 @@ module.exports = {
   sendNotification,
   dispatch: dispatcher.dispatchNotification,
   isNotificationTypeSupported: dispatcher.isTypeSupported,
-  getSupportedNotificationTypes: dispatcher.getSupportedTypes
+  getSupportedNotificationTypes: dispatcher.getSupportedTypes,
+    // Expose validation utilities
+  validateNotification: dispatcher.validateNotification,
+  isValidEmail: dispatcher.isValidEmail,
+  isValidPhoneNumber: dispatcher.isValidPhoneNumber,
+  
+  // Expose error handling utilities
+  getErrorLog: dispatcher.getErrorLog,
+  clearErrorLog: dispatcher.clearErrorLog,
+  
+  // Expose notification logging utilities
+  getNotificationLog: dispatcher.getNotificationLog,
+  clearNotificationLog: dispatcher.clearNotificationLog,
+  logNotification: logger.logNotification,
+  
+  // Expose utility modules directly for advanced usage
+  // errorHandler,
+  logger
 };

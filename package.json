@@ -7,7 +7,10 @@
     "start": "node index.js",
     "dev": "NODE_ENV=development EMAIL_MODE=mock node index.js",
     "test:validators": "node tests/validators.test.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "example:dispatch": "node examples/dispatch-examples.js",
+    "example:errors": "node examples/error-handling-examples.js",
+    "example:logging": "node examples/logging-examples.js"
   },
   "keywords": [
     "notification",
@@ -20,6 +23,7 @@
   "license": "MIT",
   "dependencies": {
     "dotenv": "^16.3.1",
+     "colors": "^1.4.0",
     "nodemailer": "^6.9.4",
     "twilio": "^4.12.0"
   }

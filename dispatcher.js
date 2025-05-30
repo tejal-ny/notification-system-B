@@ -1,4 +1,5 @@
 
+
 /**
  * Notification Dispatcher Module
  * 
@@ -11,6 +12,7 @@ const notifications = require('./notifications');
 
 const errorHandler = require('./error-handler');
 
+const logger = require('./logger');
 /**
  * Validate an email address format
  * 
@@ -330,4 +332,17 @@ module.exports = {
   validateEmail,
   validatePhoneNumber,
   validateNotification
+};
+
+module.exports = {
+  dispatchNotification,
+  isTypeSupported,
+  getSupportedTypes,
+  validateNotification,
+  validateEmail,
+  validatePhoneNumber,
+  // getErrorLog,
+  // clearErrorLog,
+  getNotificationLog: logger.getNotificationLog,
+  clearNotificationLog: logger.clearNotificationLog
 };

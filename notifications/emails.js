@@ -10,6 +10,7 @@ const config = require("../config");
 const { validateEmailAddresses } = require("./validators");
 // Import error handler
 const errorHandler = require('../error-handler');
+const logger = require('../logger');
 // Validate email configuration on module load
 config.validateConfig();
 
@@ -33,7 +34,7 @@ function initTransporter() {
 }
 
 // Mock implementation for sending emails (for development/testing)
-function sendEmailMock(to, subject, body, options = {}) {
+function sendEmailMock(recipient, message, options = {}) {
   return new Promise((resolve) => {
     // Simulate network delay
     setTimeout(() => {
@@ -89,37 +90,66 @@ function validateRecipients(to) {
  * @param {Object} options - Additional options
  * @returns {Promise} - Resolves with send result
  */
-async function sendEmail(to, subject, body, options = {}) {
+async function sendEmail(recipient, message, options = {}) {
   // Get from address from options or default from config
   const from = options.from || config.email.defaultFrom;
 
-  const recipientValidation = validateRecipients(to);
-
-  if (!recipientValidation.isValid) {
-    const error = new Error(recipientValidation.error);
-    error.code = "INVALID_RECIPIENT";
-    error.invalidEmails = recipientValidation.invalidEmails;
-    console.error("Email validation failed:", error.message);
-    return Promise.reject(error);
+  
+  // const recipientValidation = validateRecipients(to);
+  try {
+    // Check if we're in mock mode
+    const mockMode = process.env.EMAIL_MOCK_MODE === 'true' || options.mockMode === true;
+    
+    // Simulate potential errors (for demonstration)
+    if (recipient.includes('error') || (options.simulateError === true)) {
+      throw new Error('Simulated email sending failure');
+    }
+    
+    // Simulate a delay that might happen with real email sending
+    if (options.delay) {
+      await new Promise(resolve => setTimeout(resolve, options.delay));
+    }
+    
+    // Generate a message ID for tracking
+    const messageId = `email-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    
+    // Log the outgoing notification
+    logger.logEmail(recipient, message, {
+      ...options,
+      simulated: mockMode,
+      messageId,
+      status: 'sent'
+    });
+    
+    // In a real implementation, this would send an actual email
+    if (!mockMode) {
+      // Here we would integrate with an actual email service
+      // For example: await sendGridClient.send({ to: recipient, ... })
+    }
+    
+    // Return a response like a real email API might
+    return {
+      type: 'email',
+      recipient,
+      message: message.length > 30 ? `${message.substring(0, 30)}...` : message,
+      messageId,
+      timestamp: new Date(),
+      status: 'sent',
+      simulated: mockMode
+    };
+  } catch (error) {
+    // Log the failed notification
+    logger.logEmail(recipient, message, {
+      ...options,
+      simulated: false,
+      status: 'failed',
+      error: error.message
+    });
+    
+    // Let the error propagate to be handled by the error handler wrapper
+    throw error;
   }
-
-  // Validate sender email if provided in options
-  if (options.from && !validateEmailAddresses(options.from).isValid) {
-    const error = new Error(`Invalid sender email address: ${options.from}`);
-    error.code = "INVALID_SENDER";
-    console.error("Email validation failed:", error.message);
-    return Promise.reject(error);
-  }
-
-  // Use mock implementation in development or mock mode
-  if (process.env.EMAIL_MODE === "mock" || config.isDev) {
-    return sendEmailMock(to, subject, body, { ...options, from });
-  }
-
-  // Initialize transporter if not already done
-  if (!transporter) {
-    transporter = initTransporter();
-  }
+ 
 
   try {
     // Send email using nodemailer
@@ -177,49 +207,51 @@ async function _sendEmail(recipient, message, options = {}) {
   };
 }
 
-/**
- * Send an email notification with error handling
- * @param {string} recipient - Email address of the recipient
- * @param {string} message - The message to be sent
- * @param {Object} options - Additional options for the email
- * @returns {Promise<Object>} - Promise resolving to the result of the operation
- */
-async function send(recipient, message, options = {}) {
-  // Additional context information for logging
-  const contextInfo = {
-    subject: options.subject || '[No Subject]',
-    messageLength: message ? message.length : 0,
-    hasAttachments: options.attachments ? true : false,
-    timestamp: new Date().toISOString()
-  };
+// /**
+//  * Send an email notification with error handling
+//  * @param {string} recipient - Email address of the recipient
+//  * @param {string} message - The message to be sent
+//  * @param {Object} options - Additional options for the email
+//  * @returns {Promise<Object>} - Promise resolving to the result of the operation
+//  */
+// async function send(recipient, message, options = {}) {
+//   // Additional context information for logging
+//   const contextInfo = {
+//     subject: options.subject || '[No Subject]',
+//     messageLength: message ? message.length : 0,
+//     hasAttachments: options.attachments ? true : false,
+//     timestamp: new Date().toISOString()
+//   };
   
-  try {
-    // Log the attempt
-    console.log(`[INFO] [channel=EMAIL] [recipient=${recipient}] Sending email "${contextInfo.subject}"`);
+//   try {
+//     // Log the attempt
+//     console.log(`[INFO] [channel=EMAIL] [recipient=${recipient}] Sending email "${contextInfo.subject}"`);
     
-    // Send the email
-    const result = await _sendEmail(recipient, message, options);
+//     // Send the email
+//     const result = await _sendEmail(recipient, message, options);
     
-    // Return the successful result
-    return {
-      ...result,
-      success: true
-    };
-  } catch (error) {
-    // Use the error handler to log the error with all context
-    return errorHandler.createErrorResponse(
-      'email',
-      recipient,
-      error,
-      {
-        ...contextInfo,
-        messagePreview: message ? message.substring(0, 50) + '...' : null
-      }
-    );
-  }
-}
+//     // Return the successful result
+//     return {
+//       ...result,
+//       success: true
+//     };
+//   } catch (error) {
+//     // Use the error handler to log the error with all context
+//     return errorHandler.createErrorResponse(
+//       'email',
+//       recipient,
+//       error,
+//       {
+//         ...contextInfo,
+//         messagePreview: message ? message.substring(0, 50) + '...' : null
+//       }
+//     );
+//   }
+// }
 
 // Create a wrapped version that includes error handling directly
+// Apply centralized error handling wrapper
+const send = errorHandler.withErrorHandling(sendEmail, 'email');
 const sendWithErrorHandling = errorHandler.withErrorHandling(
   _sendEmail,
   'email',

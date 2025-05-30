@@ -9,6 +9,7 @@ const config = require('../config');
 const { validatePhoneNumber } = require('./validators');
 const twilio = require('twilio');
 const errorHandler = require('../error-handler');
+const logger = require('../logger');
 
 // Load environment variables
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -96,7 +97,94 @@ function sendSmsMock(to, message) {
  * @param {Object} options - Additional SMS options
  * @returns {Promise} - Resolves with send result or rejects with error
  */
-async function sendSms(to, message, options = {}) {
+async function sendSms(recipient, message, options = {}) {
+
+   try {
+    // Check if we're in mock mode
+    const mockMode = process.env.SMS_MOCK_MODE === 'true' || options.mockMode === true;
+    
+    // Simulate error for testing (if requested)
+    if (recipient.includes('error') || (options.simulateError === true)) {
+      throw new Error('Simulated SMS sending failure');
+    }
+    
+    // Simulate a delay that might happen with real SMS sending
+    if (options.delay) {
+      await new Promise(resolve => setTimeout(resolve, options.delay));
+    }
+    
+    // Generate a message ID
+    let messageId = `sms-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    
+    // For mock mode, don't actually try to send via Twilio
+    if (mockMode) {
+      // Log the notification with simulated flag
+      logger.logSMS(recipient, message, {
+        ...options,
+        simulated: true,
+        messageId,
+        provider: 'twilio-mock',
+        status: 'sent'
+      });
+      
+      return {
+        type: 'sms',
+        provider: 'twilio-mock',
+        recipient,
+        message: message.length > 30 ? `${message.substring(0, 30)}...` : message,
+        messageId,
+        timestamp: new Date(),
+        status: 'sent',
+        simulated: true
+      };
+    }
+    
+    // Only initialize the client when needed (lazy loading)
+    const twilioClient = getTwilioClient();
+    
+    // Send the SMS using Twilio
+    const result = await twilioClient.messages.create({
+      body: message,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: recipient,
+      ...options  // Allow passing additional Twilio options
+    });
+    
+    // Use the Twilio-generated SID as the message ID
+    messageId = result.sid;
+    
+    // Log the notification
+    logger.logSMS(recipient, message, {
+      ...options,
+      simulated: false,
+      messageId,
+      provider: 'twilio',
+      status: result.status
+    });
+    
+    // Return a sanitized response
+    return {
+      type: 'sms',
+      provider: 'twilio',
+      recipient,
+      message: message.length > 30 ? `${message.substring(0, 30)}...` : message,
+      messageId,
+      timestamp: new Date(),
+      status: result.status,
+      simulated: false
+    };
+  } catch (error) {
+    // Log the failed notification
+    logger.logSMS(recipient, message, {
+      ...options,
+      simulated: false,
+      status: 'failed',
+      error: error.message
+    });
+    
+    // Let the error propagate to be handled by the error handler wrapper
+    throw error;
+  }
   // Validate phone number
   const validation = validatePhoneNumber(to);
   
@@ -216,50 +304,51 @@ async function _sendSms(recipient, message, options = {}) {
     success: true
   };
 }
-
-/**
- * Send an SMS notification using Twilio with error handling
- * 
- * @param {string} recipient - Phone number of the recipient in E.164 format
- * @param {string} message - The message to be sent
- * @param {Object} options - Additional options for the SMS
- * @returns {Promise<Object>} - Promise resolving to the result of the operation
- */
-async function send(recipient, message, options = {}) {
-  // Additional context information for logging
-  const contextInfo = {
-    messageLength: message ? message.length : 0,
-    hasOptions: options && Object.keys(options).length > 0,
-    timestamp: new Date().toISOString(),
-    fromNumber: process.env.TWILIO_PHONE_NUMBER || 'unknown'
-  };
+// Apply centralized error handling wrapper
+const send = errorHandler.withErrorHandling(_sendSms, 'sms');
+// /**
+//  * Send an SMS notification using Twilio with error handling
+//  * 
+//  * @param {string} recipient - Phone number of the recipient in E.164 format
+//  * @param {string} message - The message to be sent
+//  * @param {Object} options - Additional options for the SMS
+//  * @returns {Promise<Object>} - Promise resolving to the result of the operation
+//  */
+// async function send(recipient, message, options = {}) {
+//   // Additional context information for logging
+//   const contextInfo = {
+//     messageLength: message ? message.length : 0,
+//     hasOptions: options && Object.keys(options).length > 0,
+//     timestamp: new Date().toISOString(),
+//     fromNumber: process.env.TWILIO_PHONE_NUMBER || 'unknown'
+//   };
   
-  try {
-    // Log the attempt (without exposing full message content)
-    console.log(`[INFO] [channel=SMS] [recipient=${recipient}] Sending SMS of length ${contextInfo.messageLength}`);
+//   try {
+//     // Log the attempt (without exposing full message content)
+//     console.log(`[INFO] [channel=SMS] [recipient=${recipient}] Sending SMS of length ${contextInfo.messageLength}`);
     
-    // Send the SMS
-    const result = await _sendSms(recipient, message, options);
+//     // Send the SMS
+//     const result = await _sendSms(recipient, message, options);
     
-    // Return the successful result
-    return {
-      ...result,
-      success: true
-    };
-  } catch (error) {
-    // Use the error handler to log the error with all context
-    // But make sure to sanitize the message to avoid logging sensitive content
-    return errorHandler.createErrorResponse(
-      'sms',
-      recipient,
-      error,
-      {
-        ...contextInfo,
-        messagePreview: message ? message.substring(0, 20) + '...' : null
-      }
-    );
-  }
-}
+//     // Return the successful result
+//     return {
+//       ...result,
+//       success: true
+//     };
+//   } catch (error) {
+//     // Use the error handler to log the error with all context
+//     // But make sure to sanitize the message to avoid logging sensitive content
+//     return errorHandler.createErrorResponse(
+//       'sms',
+//       recipient,
+//       error,
+//       {
+//         ...contextInfo,
+//         messagePreview: message ? message.substring(0, 20) + '...' : null
+//       }
+//     );
+//   }
+// }
 
 // Create a wrapped version that includes error handling directly
 const sendWithErrorHandling = errorHandler.withErrorHandling(
