@@ -73,14 +73,123 @@ const notificationTemplates = {
   };
   
 /**
- * Renders a template string by replacing placeholders with values from a data object
+ * Renders a template by language, replacing placeholders with values from a data object
  * 
- * @param {string} template - The template string containing placeholders like {{key}}
- * @param {object} data - An object containing key-value pairs for replacement
- * @param {boolean} [logWarnings=true] - Whether to log warnings for missing values
- * @returns {string} The rendered template with all placeholders replaced
+ * @param {Object} templates - The templates object containing multi-language templates
+ * @param {string} channel - The notification channel ('email' or 'sms')
+ * @param {string} templateName - The name of the template to use
+ * @param {string} language - The language code to use (e.g., 'en', 'es', 'fr', 'de')
+ * @param {Object} data - An object containing key-value pairs for replacement
+ * @param {Object} [options] - Additional options
+ * @param {boolean} [options.logWarnings=true] - Whether to log warning messages
+ * @param {boolean} [options.returnEmptyOnMissing=false] - Whether to return empty string instead of throwing error on missing template
+ * @param {string} [options.fallbackLanguage='en'] - Primary fallback language code
+ * @returns {string|Object|null} The rendered template with all placeholders replaced
  */
-function renderTemplate(template, data, logWarnings = true) {
+function renderTemplateByLanguage(templates, channel, templateName, language, data, options = {}) {
+    // Default options
+    const {
+      logWarnings = true,
+      returnEmptyOnMissing = false,
+      fallbackLanguage = 'en'
+    } = options;
+    
+    // Check if inputs are valid
+    if (!templates || !channel || !templateName || !language || !data) {
+      throw new Error('Missing required parameters');
+    }
+    
+    // Check if the channel exists
+    if (!templates[channel]) {
+      const errorMsg = `Channel "${channel}" not found in templates`;
+      if (logWarnings) {
+        console.warn(`Warning: ${errorMsg}`);
+      }
+      if (returnEmptyOnMissing) {
+        return null;
+      }
+      throw new Error(errorMsg);
+    }
+    
+    // Check if the template exists
+    if (!templates[channel][templateName]) {
+      const errorMsg = `Template "${templateName}" not found in channel "${channel}"`;
+      if (logWarnings) {
+        console.warn(`Warning: ${errorMsg}`);
+      }
+      if (returnEmptyOnMissing) {
+        return null;
+      }
+      throw new Error(errorMsg);
+    }
+    
+    // Try to find the template in the following order:
+    // 1. Requested language
+    // 2. Fallback language (usually 'en')
+    // 3. Any available language (first one found)
+    
+    let template = null;
+    let usedLanguage = null;
+    
+    // 1. Check requested language
+    if (templates[channel][templateName][language]) {
+      template = templates[channel][templateName][language];
+      usedLanguage = language;
+    }
+    // 2. Check fallback language
+    else if (language !== fallbackLanguage && templates[channel][templateName][fallbackLanguage]) {
+      template = templates[channel][templateName][fallbackLanguage];
+      usedLanguage = fallbackLanguage;
+      if (logWarnings) {
+        console.warn(`Warning: Template "${templateName}" not available in language "${language}". Falling back to "${fallbackLanguage}".`);
+      }
+    }
+    // 3. Use any available language as last resort
+    else {
+      const availableLanguages = Object.keys(templates[channel][templateName]);
+      if (availableLanguages.length > 0) {
+        usedLanguage = availableLanguages[0];
+        template = templates[channel][templateName][usedLanguage];
+        if (logWarnings) {
+          console.warn(`Warning: Template "${templateName}" not available in language "${language}" or fallback "${fallbackLanguage}". Using "${usedLanguage}" as last resort.`);
+        }
+      } else {
+        const errorMsg = `No language versions found for template "${templateName}" in channel "${channel}"`;
+        if (logWarnings) {
+          console.warn(`Warning: ${errorMsg}`);
+        }
+        if (returnEmptyOnMissing) {
+          return null;
+        }
+        throw new Error(errorMsg);
+      }
+    }
+    
+    // If the template is an object (like email with subject and body)
+    if (typeof template === 'object') {
+      const result = {};
+      // Render each property of the template object
+      for (const key in template) {
+        if (Object.prototype.hasOwnProperty.call(template, key)) {
+          result[key] = renderTemplate(template[key], data, logWarnings);
+        }
+      }
+      return result;
+    }
+    
+    // If the template is a string (like SMS)
+    return renderTemplate(template, data, logWarnings);
+  }
+  
+  /**
+   * Renders a template string by replacing placeholders with values
+   * 
+   * @param {string} template - The template string containing placeholders like {{key}}
+   * @param {object} data - An object containing key-value pairs for replacement
+   * @param {boolean} [logWarnings=true] - Whether to log warnings for missing values
+   * @returns {string} The rendered template with all placeholders replaced
+   */
+  function renderTemplate(template, data, logWarnings = true) {
     // Start with the original template
     let renderedTemplate = template;
     
@@ -124,7 +233,7 @@ function renderTemplate(template, data, logWarnings = true) {
       });
     }
     
-    // Return the rendered template (which may still contain some unreplaced placeholders)
+    // Return the rendered template
     return renderedTemplate;
   }
   
@@ -192,5 +301,6 @@ function sendNotificationWithTemplate(channel, templateName, language, data) {
     notificationTemplates,
     renderTemplate,
     getLocalizedTemplate,
-    sendNotificationWithTemplate
+    sendNotificationWithTemplate,
+    renderTemplateByLanguage
     };

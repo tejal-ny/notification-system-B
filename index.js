@@ -21,6 +21,7 @@ const getUserPreferences = require('./user-preferences').getUserPreferences;
 const notificationTemplates = require('./notificationTemplates').notificationTemplates;
 const renderTemplate = require('./notificationTemplates').renderTemplate;
 const sendNotificationWithTemplate = require('./notificationTemplates').sendNotificationWithTemplate;
+const renderTemplateByLanguage = require('./notificationTemplates').renderTemplateByLanguage;
 // Initialize the notification system
 console.log("Initializing notification system...");
 
@@ -133,25 +134,18 @@ async function sendExampleEmails() {
 // Example usage
 async function main() {
   const userData = {
-    userName: "Carlos Rodriguez",
+    userName: "John Smith",
     serviceName: "CloudApp",
-    verificationLink: "https://cloudapp.com/verify?token=abc123",
-    supportEmail: "soporte@cloudapp.com"
+    verificationLink: "https://cloudapp.com/verify?token=abc123"
   };
-  
-  const welcomeEmail = sendNotificationWithTemplate('email', 'welcome', 'es', userData);
-  console.log("Subject:", welcomeEmail.subject);
-  console.log("Body:", welcomeEmail.body);
-  
-  // Example 2: Send a verification SMS in French
-  const verificationData = {
-    serviceName: "CloudApp",
-    verificationCode: "123456",
-    expiryTime: "15"
-  };
-  
-  const verificationSms = sendNotificationWithTemplate('sms', 'verification', 'fr', verificationData);
-  console.log("SMS:", verificationSms);
+  const result = renderTemplateByLanguage(
+    notificationTemplates,
+    'email',
+    'welcome',
+    'ja',  // Japanese (not available)
+    userData
+  );
+  console.log("Fallback to English:", result.subject);
   // initializeNewUser("tejal@example.com");
   // getUserPreferences("tejal1@example.com")
   // getChannelOptedInUsers('email')
