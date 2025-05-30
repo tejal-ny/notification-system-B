@@ -95,3 +95,23 @@ async function main() {
 }
 
 main().catch(console.error);
+
+// Example usage: Initialize a new user only if they don't exist
+console.log('\n--- Initializing New Users ---');
+
+// This will create a new user with default opt-in values (email: true, sms: true)
+const newUser = userPreferences.initializeNewUser('new.user@example.com');
+console.log('New user initialized:', newUser);
+
+// This will NOT overwrite an existing user's preferences
+const existingUser = userPreferences.initializeNewUser('jane.doe@example.com', true, false);
+console.log('Existing user initialization result:', existingUser);
+
+// Initialize a user with custom opt-in values
+const customUser = userPreferences.initializeNewUser('custom.user@example.com', true, false);
+console.log('Custom user with email only:', customUser);
+
+// Example usage: Export preferences to a custom file
+console.log('\n--- Exporting Preferences ---');
+const exportSuccess = userPreferences.exportPreferences('data/preferences-backup.json');
+console.log('Export successful?', exportSuccess);

@@ -11,6 +11,7 @@ const notificationSystem = require("./notifications");
 const {sendSms} = require('./notifications/sms');
 const dispatcher = require('./dispatcher');
 const logger = require('./logger');
+const initializeNewUser = require('./user-preferences').initializeNewUser;
 // Initialize the notification system
 console.log("Initializing notification system...");
 
@@ -122,16 +123,17 @@ async function sendExampleEmails() {
 
 // Example usage
 async function main() {
-  try {
-    const recipientNumber = '+1234567890';
-    const message = 'Hello! This is a test message.';
+  initializeNewUser("tejal@example.com");
+  // try {
+  //   const recipientNumber = '+1234567890';
+  //   const message = 'Hello! This is a test message.';
     
-    await sendSms(recipientNumber, message);
-    console.log('Message sent successfully.');
-  } catch (error) {
-    console.error('Application error:', error.message);
-    process.exit(1);
-  }
+  //   await sendSms(recipientNumber, message);
+  //   console.log('Message sent successfully.');
+  // } catch (error) {
+  //   console.error('Application error:', error.message);
+  //   process.exit(1);
+  // }
 }
 if (require.main === module) {
   console.log('Notification System initialized');
@@ -186,7 +188,7 @@ if (require.main === module) {
     }
   }
   console.log("Starting notification service with validation examples...");
-  runExamples();
+  // runExamples();
   main();
 }
 

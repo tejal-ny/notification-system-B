@@ -289,3 +289,95 @@ module.exports = {
   UserPreferences,       // Export the class for custom instances
   userPreferences,       // Export a singleton instance
 };
+
+function createDefaultPreferences() {
+    return {
+      emailEnabled: true,  // Default to opt-in for email
+      smsEnabled: false,   // Default to opt-out for SMS (requires explicit opt-in)
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  }
+  
+  /**
+   * Create default preferences with custom initial values
+   * 
+   * @param {boolean} [emailEnabled=true] - Initial email preference
+   * @param {boolean} [smsEnabled=true] - Initial SMS preference  
+   * @returns {Object} Custom default preferences object
+   */
+function createCustomDefaultPreferences(emailEnabled = true, smsEnabled = true) {
+    return {
+      emailEnabled: emailEnabled === true,
+      smsEnabled: smsEnabled === true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  function isValidUserId(userId) {
+    if (!userId || typeof userId !== 'string') {
+      return false;
+    }
+    
+    // If it looks like an email, validate the format
+    if (userId.includes('@')) {
+      return EMAIL_VALIDATION_REGEX.test(userId);
+    }
+    
+    // Otherwise just ensure it's not empty
+    return userId.trim().length > 0;
+  }
+
+let preferencesStore = {};
+function savePreferences() {
+    try {
+      const data = JSON.stringify(preferencesStore, null, 2);
+      fs.writeFileSync(PREFERENCES_FILE, data, 'utf8');
+      return true;
+    } catch (error) {
+      console.error('Failed to save preferences:', error.message);
+      return false;
+    }
+  }
+
+  /**
+ * Initialize a new user with default notification preferences
+ * Only adds the user if they don't already exist in the preferences store
+ * 
+ * @param {string} userId - User ID or email
+ * @param {boolean} [emailEnabled=true] - Initial email opt-in status
+ * @param {boolean} [smsEnabled=true] - Initial SMS opt-in status
+ * @returns {Object|null} The new user preferences or null if user already exists or is invalid
+ */
+function initializeNewUser(userId, emailEnabled = true, smsEnabled = true) {
+    console.log(`Initializing new user with ID: ${userId}`);
+    // Validate user ID
+    if (!isValidUserId(userId)) {
+      console.error(`Invalid user ID: ${userId}`);
+      return null;
+    }
+    
+    // Check if user already exists
+    if (preferencesStore[userId]) {
+      console.log(`User ${userId} already has preferences, not initializing`);
+      return null; // User already exists, don't overwrite
+    }
+    
+    // Create new preferences with the specified opt-in values
+    const newPreferences = createCustomDefaultPreferences(emailEnabled, smsEnabled);
+    
+    // Add to preferences store
+    preferencesStore[userId] = newPreferences;
+    
+    // Persist changes
+    savePreferences();
+    
+    return newPreferences;
+  }
+
+  module.exports = {
+    createCustomDefaultPreferences,
+    createDefaultPreferences,
+    initializeNewUser
+  };

@@ -1,23 +1,8 @@
-[
-    {
-      "userId": "alice@example.com",
-      "emailEnabled": true,
-      "smsEnabled": false,
-      "phoneNumber": null,
-      "lastUpdated": "2025-05-29T08:30:45.123Z"
-    },
-    {
-      "userId": "bob@example.com",
-      "emailEnabled": true,
-      "smsEnabled": true,
-      "phoneNumber": "+15551234567",
-      "lastUpdated": "2025-05-29T10:15:22.456Z"
-    },
-    {
-      "userId": "charlie@example.com",
-      "emailEnabled": false,
-      "smsEnabled": true,
-      "phoneNumber": "+15559876543",
-      "lastUpdated": "2025-05-28T16:45:30.789Z"
-    }
-  ]
+{
+  "tejal@example.com": {
+    "emailEnabled": true,
+    "smsEnabled": true,
+    "createdAt": "2025-05-30T05:28:18.160Z",
+    "updatedAt": "2025-05-30T05:28:18.162Z"
+  }
+}
