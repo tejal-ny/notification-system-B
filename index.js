@@ -18,6 +18,8 @@ const initializeUsersWithDefaultPreferences = require('./user-preferences').init
 const toggleChannelPreference = require('./user-preferences').toggleChannelPreference;
 const getChannelOptedInUsers = require('./user-preferences').getChannelOptedInUsers;
 const getUserPreferences = require('./user-preferences').getUserPreferences;
+const notificationTemplates = require('./notificationTemplates').notificationTemplates;
+const renderTemplate = require('./notificationTemplates').renderTemplate;
 // Initialize the notification system
 console.log("Initializing notification system...");
 
@@ -129,8 +131,31 @@ async function sendExampleEmails() {
 
 // Example usage
 async function main() {
+  const emailData = {
+    userName: "Jane Doe",
+    serviceName: "CloudApp",
+    verificationLink: "https://cloudapp.com/verify?token=xyz789",
+    supportEmail: "help@cloudapp.com",
+  };
+
+  const welcomeEmailSubject = renderTemplate(notificationTemplates.email.welcome.subject, emailData);
+  const welcomeEmailBody = renderTemplate(notificationTemplates.email.welcome.body, emailData);
+
+  console.log("welcomeEmailSubject:", welcomeEmailSubject);
+  console.log("welcomeEmailBody:", welcomeEmailBody);
+
+  const smsData = {
+    serviceName: "CloudApp",
+    userName: "Jane",
+    verificationCode: "472913",
+    expiryTime: "15"
+  };
+
+  const verificationSMS = renderTemplate(notificationTemplates.sms.verification, smsData);
+
+  console.log("verificationSMS:", verificationSMS);
   // initializeNewUser("tejal@example.com");
-  getUserPreferences("tejal1@example.com")
+  // getUserPreferences("tejal1@example.com")
   // getChannelOptedInUsers('email')
   // toggleChannelPreference('tejal1@example.com', 'email');
   // initializeUsersWithDefaultPreferences(['tejal1@example.com', 'tejal2@example.com'])

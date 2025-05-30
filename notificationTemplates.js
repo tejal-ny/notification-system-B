@@ -32,4 +32,50 @@ const notificationTemplates = {
     }
   };
   
-  module.exports = notificationTemplates;
+  /**
+ * Renders a template string by replacing placeholders with values from a data object
+ * 
+ * @param {string} template - The template string containing placeholders in {{key}} format
+ * @param {Object} data - Object with keys matching the placeholder names and values to replace them with
+ * @param {Object} [options] - Optional configuration object
+ * @param {boolean} [options.keepMissingPlaceholders=false] - If true, placeholders without matching data will be left as is
+ * @returns {string} The rendered template with all placeholders replaced
+ */
+function renderTemplate(template, data, options = {}) {
+    // Default options
+    const { keepMissingPlaceholders = false } = options;
+    
+    // If template is not a string or data is not an object, return the original template
+    if (typeof template !== 'string' || !data || typeof data !== 'object') {
+      return template;
+    }
+  
+    // Create a copy of the template string to modify
+    let renderedTemplate = template;
+    
+    // Use a regular expression to find all {{placeholder}} patterns
+    const placeholderPattern = /{{([^{}]+)}}/g;
+    
+    // Replace each placeholder with its corresponding value from the data object
+    renderedTemplate = renderedTemplate.replace(placeholderPattern, (match, placeholderKey) => {
+      // Trim any whitespace from the placeholder key
+      const key = placeholderKey.trim();
+      
+      // Check if the key exists in the data object
+      if (key in data) {
+        // If the value is null or undefined, return an empty string
+        return data[key] === null || data[key] === undefined ? '' : String(data[key]);
+      }
+      
+      // If keepMissingPlaceholders is true, return the original placeholder
+      // Otherwise, return an empty string
+      return keepMissingPlaceholders ? match : '';
+    });
+    
+    return renderedTemplate;
+  }
+
+  module.exports = {
+    notificationTemplates,
+    renderTemplate
+    };
