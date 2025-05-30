@@ -115,3 +115,39 @@ console.log('Custom user with email only:', customUser);
 console.log('\n--- Exporting Preferences ---');
 const exportSuccess = userPreferences.exportPreferences('data/preferences-backup.json');
 console.log('Export successful?', exportSuccess);
+
+// Example usage: Update notification preferences for existing user
+console.log('\n--- Updating Specific Notification Preferences ---');
+// Update only email preference
+const emailUpdate = userPreferences.updateNotificationPreferences('jane.doe@example.com', {
+  email: true
+});
+console.log("Email-only update for Jane:", emailUpdate);
+
+// Update only SMS preference
+const smsUpdate = userPreferences.updateNotificationPreferences('john.doe@example.com', {
+  sms: true
+});
+console.log("SMS-only update for John:", smsUpdate);
+
+// Update both preferences at once
+const bothUpdate = userPreferences.updateNotificationPreferences('marketing@company.com', {
+  email: false,
+  sms: false
+});
+console.log("Both preferences updated for marketing:", bothUpdate);
+
+// Create new user with specific preferences
+const createWithPrefs = userPreferences.updateNotificationPreferences('support@company.com', {
+  email: true,
+  sms: false
+});
+console.log("New user created with specific preferences:", createWithPrefs);
+
+// Invalid update (should fail gracefully)
+const invalidUpdate = userPreferences.updateNotificationPreferences('john.doe@example.com', {
+  invalidField: true
+});
+console.log("Invalid update attempt:", invalidUpdate);
+
+// Example usage: Export preferences to a custom file

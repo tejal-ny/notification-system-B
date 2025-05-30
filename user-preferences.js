@@ -376,8 +376,133 @@ function initializeNewUser(userId, emailEnabled = true, smsEnabled = true) {
     return newPreferences;
   }
 
+  /**
+ * Initialize a new user with both email and SMS notification preferences enabled
+ * 
+ * This function only creates the user if they don't already exist in the preferences store.
+ * 
+ * @param {string} userId - User ID or email 
+ * @returns {Object|null} The new user preferences or null if user already exists/invalid ID
+ */
+function initializeNewUserWithAllEnabled(userId) {
+    // Validate user ID
+    if (!isValidUserId(userId)) {
+      console.error(`Invalid user ID: ${userId}`);
+      return null;
+    }
+    
+    // Check if user already exists
+    if (preferencesStore[userId]) {
+      console.log(`User ${userId} already exists in preferences store. No changes made.`);
+      return null; // User already exists, don't overwrite
+    }
+    
+    // Create new user with both email and SMS enabled
+    const preferences = createDefaultPreferences({
+      emailEnabled: true,
+      smsEnabled: true
+    });
+    
+    // Store in the preferences object
+    preferencesStore[userId] = preferences;
+    
+    // Save to file
+    savePreferences();
+    
+    return preferences;
+  }
+  
+  /**
+   * Update an existing user's notification preferences
+   * 
+   * This function specifically updates email and/or SMS preferences, 
+   * creating the user with default values if they don't exist yet.
+   * 
+   * @param {string} userId - User ID or email
+   * @param {Object} preferences - Object containing preference updates
+   * @param {boolean} [preferences.email] - Email notification preference
+   * @param {boolean} [preferences.sms] - SMS notification preference
+   * @returns {Object} Result object with status and updated preferences
+   */
+  function updateNotificationPreferences(userId, preferences = {}) {
+    // Validate user ID
+    if (!isValidUserId(userId)) {
+      return {
+        success: false,
+        message: `Invalid user ID: ${userId}`,
+        preferences: null
+      };
+    }
+    
+    // Validate preferences object
+    if (!preferences || typeof preferences !== 'object') {
+      return {
+        success: false,
+        message: 'Preferences must be an object',
+        preferences: null
+      };
+    }
+    
+    // Extract and validate email and SMS preferences
+    const updates = {};
+    let hasUpdates = false;
+    
+    // Check if email preference is provided and is a boolean
+    if ('email' in preferences) {
+      updates.emailEnabled = Boolean(preferences.email);
+      hasUpdates = true;
+    }
+    
+    // Check if SMS preference is provided and is a boolean
+    if ('sms' in preferences) {
+      updates.smsEnabled = Boolean(preferences.sms);
+      hasUpdates = true;
+    }
+    
+    // If no valid updates were provided
+    if (!hasUpdates) {
+      return {
+        success: false,
+        message: 'No valid preference updates provided',
+        preferences: getUserPreferences(userId)
+      };
+    }
+    
+    // Get current preference or create new ones
+    let currentPreferences = preferencesStore[userId];
+    let isNewUser = false;
+    
+    if (!currentPreferences) {
+      // User doesn't exist yet, create with defaults
+      currentPreferences = createDefaultPreferences();
+      isNewUser = true;
+    }
+    
+    // Apply the updates
+    const updatedPreferences = {
+      ...currentPreferences,
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Store updated preferences
+    preferencesStore[userId] = updatedPreferences;
+    
+    // Save to file
+    savePreferences();
+    
+    return {
+      success: true,
+      message: isNewUser ? 'User created with preferences' : 'Preferences updated successfully',
+      preferences: updatedPreferences,
+      updated: updates
+    };
+  }
+
   module.exports = {
     createCustomDefaultPreferences,
     createDefaultPreferences,
-    initializeNewUser
+    initializeNewUser,
+    updateNotificationPreferences,
+    initializeNewUserWithAllEnabled
   };
