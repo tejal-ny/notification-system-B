@@ -20,6 +20,7 @@ const getChannelOptedInUsers = require('./user-preferences').getChannelOptedInUs
 const getUserPreferences = require('./user-preferences').getUserPreferences;
 const notificationTemplates = require('./notificationTemplates').notificationTemplates;
 const renderTemplate = require('./notificationTemplates').renderTemplate;
+const sendNotificationWithTemplate = require('./notificationTemplates').sendNotificationWithTemplate;
 // Initialize the notification system
 console.log("Initializing notification system...");
 
@@ -131,29 +132,26 @@ async function sendExampleEmails() {
 
 // Example usage
 async function main() {
-  const emailData = {
-    userName: "Jane Doe",
+  const userData = {
+    userName: "Carlos Rodriguez",
     serviceName: "CloudApp",
-    verificationLink: "https://cloudapp.com/verify?token=xyz789",
-    // supportEmail: "help@cloudapp.com",
+    verificationLink: "https://cloudapp.com/verify?token=abc123",
+    supportEmail: "soporte@cloudapp.com"
   };
-
-  const welcomeEmailSubject = renderTemplate(notificationTemplates.email.welcome.subject, emailData);
-  const welcomeEmailBody = renderTemplate(notificationTemplates.email.welcome.body, emailData);
-
-  console.log("welcomeEmailSubject:", welcomeEmailSubject);
-  console.log("welcomeEmailBody:", welcomeEmailBody);
-
-  const smsData = {
+  
+  const welcomeEmail = sendNotificationWithTemplate('email', 'welcome', 'es', userData);
+  console.log("Subject:", welcomeEmail.subject);
+  console.log("Body:", welcomeEmail.body);
+  
+  // Example 2: Send a verification SMS in French
+  const verificationData = {
     serviceName: "CloudApp",
-    userName: "Jane",
-    verificationCode: "472913",
-    // expiryTime: "15"
+    verificationCode: "123456",
+    expiryTime: "15"
   };
-
-  const verificationSMS = renderTemplate(notificationTemplates.sms.verification, smsData);
-
-  console.log("verificationSMS:", verificationSMS);
+  
+  const verificationSms = sendNotificationWithTemplate('sms', 'verification', 'fr', verificationData);
+  console.log("SMS:", verificationSms);
   // initializeNewUser("tejal@example.com");
   // getUserPreferences("tejal1@example.com")
   // getChannelOptedInUsers('email')

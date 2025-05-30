@@ -1,34 +1,74 @@
+/**
+ * Multi-language notification templates
+ * Templates organized by channel type, template name, language code, and template content
+ * Each template uses {{placeholder}} format for dynamic content
+ */
 const notificationTemplates = {
     email: {
       welcome: {
-        subject: "Welcome to {{serviceName}}!",
-        body: "Hello {{userName}},\n\nWelcome to {{serviceName}}! We're excited to have you join us.\n\nTo get started, please verify your email by clicking on the link below:\n{{verificationLink}}\n\nIf you have any questions, feel free to contact our support team at {{supportEmail}}.\n\nBest regards,\nThe {{serviceName}} Team"
+        en: {
+          subject: "Welcome to {{serviceName}}!",
+          body: "Hello {{userName}},\n\nWelcome to {{serviceName}}! We're excited to have you join us.\n\nTo get started, please verify your email by clicking on the link below:\n{{verificationLink}}\n\nIf you have any questions, feel free to contact our support team at {{supportEmail}}.\n\nBest regards,\nThe {{serviceName}} Team"
+        },
+        es: {
+          subject: "¡Bienvenido a {{serviceName}}!",
+          body: "Hola {{userName}},\n\n¡Bienvenido a {{serviceName}}! Estamos emocionados de que te unas a nosotros.\n\nPara comenzar, verifica tu correo electrónico haciendo clic en el enlace a continuación:\n{{verificationLink}}\n\nSi tienes alguna pregunta, no dudes en contactar a nuestro equipo de soporte en {{supportEmail}}.\n\nSaludos cordiales,\nEl Equipo de {{serviceName}}"
+        },
+        fr: {
+          subject: "Bienvenue sur {{serviceName}} !",
+          body: "Bonjour {{userName}},\n\nBienvenue sur {{serviceName}} ! Nous sommes ravis de vous compter parmi nous.\n\nPour commencer, veuillez vérifier votre e-mail en cliquant sur le lien ci-dessous :\n{{verificationLink}}\n\nSi vous avez des questions, n'hésitez pas à contacter notre équipe d'assistance à {{supportEmail}}.\n\nCordialement,\nL'équipe {{serviceName}}"
+        }
       },
       passwordReset: {
-        subject: "Password Reset Request for {{serviceName}}",
-        body: "Hello {{userName}},\n\nWe received a request to reset your password for your {{serviceName}} account.\n\nPlease click the link below to reset your password:\n{{resetLink}}\n\nThis link will expire in {{expiryTime}} hours.\n\nIf you didn't request this, you can safely ignore this email.\n\nBest regards,\nThe {{serviceName}} Team"
+        en: {
+          subject: "Password Reset Request for {{serviceName}}",
+          body: "Hello {{userName}},\n\nWe received a request to reset your password for your {{serviceName}} account.\n\nPlease click the link below to reset your password:\n{{resetLink}}\n\nThis link will expire in {{expiryTime}} hours.\n\nIf you didn't request this, you can safely ignore this email.\n\nBest regards,\nThe {{serviceName}} Team"
+        },
+        es: {
+          subject: "Solicitud de restablecimiento de contraseña para {{serviceName}}",
+          body: "Hola {{userName}},\n\nHemos recibido una solicitud para restablecer la contraseña de tu cuenta en {{serviceName}}.\n\nHaz clic en el siguiente enlace para restablecer tu contraseña:\n{{resetLink}}\n\nEste enlace caducará en {{expiryTime}} horas.\n\nSi no solicitaste esto, puedes ignorar este correo electrónico.\n\nSaludos cordiales,\nEl Equipo de {{serviceName}}"
+        },
+        fr: {
+          subject: "Demande de réinitialisation de mot de passe pour {{serviceName}}",
+          body: "Bonjour {{userName}},\n\nNous avons reçu une demande de réinitialisation de mot de passe pour votre compte {{serviceName}}.\n\nVeuillez cliquer sur le lien ci-dessous pour réinitialiser votre mot de passe :\n{{resetLink}}\n\nCe lien expirera dans {{expiryTime}} heures.\n\nSi vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail.\n\nCordialement,\nL'équipe {{serviceName}}"
+        }
       },
       orderConfirmation: {
-        subject: "Order Confirmation #{{orderNumber}}",
-        body: "Hello {{userName}},\n\nThank you for your order!\n\nOrder Number: {{orderNumber}}\nOrder Date: {{orderDate}}\nTotal Amount: {{orderTotal}}\n\nShipping Address:\n{{shippingAddress}}\n\nEstimated Delivery Date: {{estimatedDelivery}}\n\nOrder Details:\n{{orderDetails}}\n\nIf you have any questions about your order, please contact us at {{supportEmail}}.\n\nThank you for shopping with {{serviceName}}!\n\nBest regards,\nThe {{serviceName}} Team"
-      },
-      paymentReminder: {
-        subject: "Payment Reminder for {{serviceName}}",
-        body: "Hello {{userName}},\n\nThis is a friendly reminder that your payment of {{amount}} for {{serviceName}} is due on {{dueDate}}.\n\nTo make a payment, please visit your account at {{paymentLink}}.\n\nIf you've already made this payment, please disregard this message.\n\nThank you for your business!\n\nBest regards,\nThe {{serviceName}} Team"
-      },
-      accountUpdate: {
-        subject: "Your {{serviceName}} Account Has Been Updated",
-        body: "Hello {{userName}},\n\nThis email confirms that your {{serviceName}} account has been updated:\n\nChange: {{changeType}}\nDate: {{changeDate}}\n\nIf you did not make this change, please contact our support team immediately at {{supportEmail}}.\n\nBest regards,\nThe {{serviceName}} Team"
+        en: {
+          subject: "Order Confirmation #{{orderNumber}}",
+          body: "Hello {{userName}},\n\nThank you for your order!\n\nOrder Number: {{orderNumber}}\nOrder Date: {{orderDate}}\nTotal Amount: {{orderTotal}}\n\nShipping Address:\n{{shippingAddress}}\n\nEstimated Delivery Date: {{estimatedDelivery}}\n\nOrder Details:\n{{orderDetails}}\n\nIf you have any questions about your order, please contact us at {{supportEmail}}.\n\nThank you for shopping with {{serviceName}}!\n\nBest regards,\nThe {{serviceName}} Team"
+        },
+        es: {
+          subject: "Confirmación de Pedido #{{orderNumber}}",
+          body: "Hola {{userName}},\n\n¡Gracias por tu pedido!\n\nNúmero de Pedido: {{orderNumber}}\nFecha de Pedido: {{orderDate}}\nImporte Total: {{orderTotal}}\n\nDirección de Envío:\n{{shippingAddress}}\n\nFecha Estimada de Entrega: {{estimatedDelivery}}\n\nDetalles del Pedido:\n{{orderDetails}}\n\nSi tienes alguna pregunta sobre tu pedido, contáctanos en {{supportEmail}}.\n\n¡Gracias por comprar con {{serviceName}}!\n\nSaludos cordiales,\nEl Equipo de {{serviceName}}"
+        },
+        fr: {
+          subject: "Confirmation de commande #{{orderNumber}}",
+          body: "Bonjour {{userName}},\n\nNous vous remercions pour votre commande !\n\nNuméro de commande : {{orderNumber}}\nDate de la commande : {{orderDate}}\nMontant total : {{orderTotal}}\n\nAdresse de livraison :\n{{shippingAddress}}\n\nDate de livraison estimée : {{estimatedDelivery}}\n\nDétails de la commande :\n{{orderDetails}}\n\nSi vous avez des questions concernant votre commande, veuillez nous contacter à {{supportEmail}}.\n\nMerci d'avoir fait vos achats avec {{serviceName}} !\n\nCordialement,\nL'équipe {{serviceName}}"
+        }
       }
     },
     sms: {
-      welcome: "Welcome to {{serviceName}}, {{userName}}! Your account has been created successfully. Reply HELP for assistance.",
-      verification: "Your {{serviceName}} verification code is {{verificationCode}}. This code will expire in {{expiryTime}} minutes.",
-      orderUpdate: "{{serviceName}} Order #{{orderNumber}} update: {{updateMessage}}. Track your order at {{trackingLink}}",
-      appointmentReminder: "Reminder: You have an appointment scheduled for {{appointmentDate}} at {{appointmentTime}}. Reply C to confirm or R to reschedule.",
-      paymentConfirmation: "Your payment of {{amount}} to {{serviceName}} has been processed successfully. Reference: {{referenceNumber}}",
-      loginAlert: "New login detected on your {{serviceName}} account from {{deviceInfo}} at {{loginTime}}. If this wasn't you, please reset your password immediately.",
-      promotionAlert: "{{promotionMessage}} Use code {{promoCode}} to get {{discountAmount}} off your next purchase at {{serviceName}}. Valid until {{expiryDate}}."
+      welcome: {
+        en: "Welcome to {{serviceName}}, {{userName}}! Your account has been created successfully. Reply HELP for assistance.",
+        es: "¡Bienvenido a {{serviceName}}, {{userName}}! Tu cuenta ha sido creada con éxito. Responde AYUDA para obtener asistencia.",
+        fr: "Bienvenue sur {{serviceName}}, {{userName}} ! Votre compte a été créé avec succès. Répondez AIDE pour obtenir de l'assistance."
+      },
+      verification: {
+        en: "Your {{serviceName}} verification code is {{verificationCode}}. This code will expire in {{expiryTime}} minutes.",
+        es: "Tu código de verificación de {{serviceName}} es {{verificationCode}}. Este código caducará en {{expiryTime}} minutos.",
+        fr: "Votre code de vérification {{serviceName}} est {{verificationCode}}. Ce code expirera dans {{expiryTime}} minutes."
+      },
+      orderUpdate: {
+        en: "{{serviceName}} Order #{{orderNumber}} update: {{updateMessage}}. Track your order at {{trackingLink}}",
+        es: "Actualización del pedido #{{orderNumber}} de {{serviceName}}: {{updateMessage}}. Sigue tu pedido en {{trackingLink}}",
+        fr: "Mise à jour de la commande {{serviceName}} #{{orderNumber}} : {{updateMessage}}. Suivez votre commande sur {{trackingLink}}"
+      },
+      appointmentReminder: {
+        en: "Reminder: You have an appointment scheduled for {{appointmentDate}} at {{appointmentTime}}. Reply C to confirm or R to reschedule.",
+        es: "Recordatorio: Tienes una cita programada para el {{appointmentDate}} a las {{appointmentTime}}. Responde C para confirmar o R para reprogramar.",
+        fr: "Rappel : Vous avez un rendez-vous prévu le {{appointmentDate}} à {{appointmentTime}}. Répondez C pour confirmer ou R pour reprogrammer."
+      }
     }
   };
   
@@ -87,8 +127,70 @@ function renderTemplate(template, data, logWarnings = true) {
     // Return the rendered template (which may still contain some unreplaced placeholders)
     return renderedTemplate;
   }
+  
+  /**
+   * Gets a template in the specified language, falling back to English if the requested
+   * language is not available
+   * 
+   * @param {object} templates - The template object containing language-specific templates
+   * @param {string} language - The language code (e.g., 'en', 'es', 'fr')
+   * @returns {object|string} The template in the requested language or English as fallback
+   */
+  function getLocalizedTemplate(templates, language) {
+    // If the requested language exists, use it
+    if (templates[language]) {
+      return templates[language];
+    }
+    
+    // Otherwise, fall back to English
+    if (templates['en']) {
+      console.warn(`Language '${language}' not found, using English as fallback`);
+      return templates['en'];
+    }
+    
+    // If even English doesn't exist, use the first available language
+    const availableLanguage = Object.keys(templates)[0];
+    console.warn(`Neither requested language '${language}' nor English found, using '${availableLanguage}' as fallback`);
+    return templates[availableLanguage];
+  }
+
+  /**
+ * Sends a notification using the appropriate template and language
+ * 
+ * @param {string} channel - The notification channel ('email' or 'sms')
+ * @param {string} templateName - The name of the template to use
+ * @param {string} language - The preferred language code 
+ * @param {object} data - Data for template personalization
+ * @returns {object|string} The rendered notification
+ */
+function sendNotificationWithTemplate(channel, templateName, language, data) {
+    // Validate inputs
+    if (!notificationTemplates[channel]) {
+      throw new Error(`Invalid channel: ${channel}`);
+    }
+    
+    if (!notificationTemplates[channel][templateName]) {
+      throw new Error(`Template not found: ${templateName}`);
+    }
+    
+    // Get the template in the user's preferred language (with fallback)
+    const template = getLocalizedTemplate(notificationTemplates[channel][templateName], language);
+    
+    // For email templates, render both subject and body
+    if (channel === 'email' && typeof template === 'object') {
+      return {
+        subject: renderTemplate(template.subject, data),
+        body: renderTemplate(template.body, data)
+      };
+    }
+    
+    // For SMS or other simple templates, just render the string
+    return renderTemplate(template, data);
+  }
 
   module.exports = {
     notificationTemplates,
-    renderTemplate
+    renderTemplate,
+    getLocalizedTemplate,
+    sendNotificationWithTemplate
     };
