@@ -297,6 +297,7 @@ function createDefaultPreferences() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isDeleted: false,
+      preferredLanguage: "en"
     };
   }
   
@@ -314,6 +315,7 @@ function createCustomDefaultPreferences(emailEnabled = true, smsEnabled = true) 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isDeleted: false,
+      preferredLanguage: "en"
     };
   }
 
@@ -330,6 +332,29 @@ function createCustomDefaultPreferences(emailEnabled = true, smsEnabled = true) 
     // Otherwise just ensure it's not empty
     return userId.trim().length > 0;
   }
+
+  /**
+ * Validate a language code
+ * 
+ * @param {string} languageCode - Language code to validate (e.g., 'en', 'es', 'fr')
+ * @returns {boolean} Whether the language code is valid
+ */
+function isValidLanguageCode(languageCode) {
+    // If not a string or empty, it's invalid
+    if (!languageCode || typeof languageCode !== 'string') {
+      return false;
+    }
+    
+    // Trim whitespace
+    const code = languageCode.trim();
+    
+    // Basic validation: 
+    // - Must be 2-3 characters for ISO 639-1/639-2 language codes
+    // - Can also support 5 chars for language-region (e.g., 'en-US', 'fr-CA')
+    // - Allow only letters and hyphens
+    return /^[a-zA-Z]{2,3}(-[a-zA-Z]{2,3})?$/.test(code);
+  }
+  
 
 let preferencesStore = {};
 function savePreferences() {
@@ -392,6 +417,12 @@ function initializeNewUserWithAllEnabled(userId) {
       console.error(`Invalid user ID: ${userId}`);
       return null;
     }
+
+    // Validate language
+  if (!isValidLanguageCode(language)) {
+    console.error(`Invalid language code: ${language}. Using default 'en' instead.`);
+    language = "en";
+  }
     
     // Check if user already exists
     if (preferencesStore[userId]) {
@@ -415,95 +446,81 @@ function initializeNewUserWithAllEnabled(userId) {
   }
   
 /**
- * Update preferences for an existing user only
+ * Update preferences for an existing user only with strict validation
  * 
  * Unlike updateUserPreferences, this function will not create a new user
- * if they don't exist. It only updates existing users.
+ * if they don't exist. It only updates existing users and enforces strict
+ * data type validation.
  * 
  * @param {string} userId - User ID or email
  * @param {Object} preferences - Object containing preferences to update
  * @param {boolean} [preferences.emailEnabled] - Whether email notifications are enabled
  * @param {boolean} [preferences.smsEnabled] - Whether SMS notifications are enabled
- * @returns {Object|{error: string}} - Updated preferences object or error object with details
+ * @param {string} [preferences.preferredLanguage] - User's preferred language code
+ * @returns {Object|{error: string}} - Updated preferences or error object with description
  */
 function updateExistingUserPreferences(userId, preferences) {
     // Validate user ID
     if (!isValidUserId(userId)) {
-      const errorMsg = `Invalid user ID: ${userId}`;
-      console.error(errorMsg);
-      return { error: errorMsg, code: 'INVALID_USER_ID' };
+      const error = `Invalid user ID: ${userId}`;
+      console.error(error);
+      return { error };
     }
     
-    // Validate preferences object
-    if (!preferences) {
-      const errorMsg = 'Preferences cannot be null or undefined';
-      console.error(errorMsg);
-      return { error: errorMsg, code: 'MISSING_PREFERENCES' };
-    }
-    
-    if (typeof preferences !== 'object' || Array.isArray(preferences)) {
-      const errorMsg = 'Preferences must be a plain object';
-      console.error(errorMsg);
-      return { error: errorMsg, code: 'INVALID_PREFERENCES_TYPE' };
-    }
-    
-    // Check if user exists
+    // Check if user exists in the preferences store
     if (!preferencesStore[userId]) {
-      const errorMsg = `User ${userId} not found in preferences store`;
-      console.error(errorMsg);
-      return { error: errorMsg, code: 'USER_NOT_FOUND' };
+      const error = `User ${userId} does not exist in preferences store`;
+      console.error(error);
+      return { error };
     }
     
-    // Create a new preferences object with only valid fields
+    // Ensure preferences is an object
+    if (!preferences || typeof preferences !== 'object') {
+      const error = 'Preferences must be an object';
+      console.error(error);
+      return { error };
+    }
+    
+    // Validate preference types
+    if ('emailEnabled' in preferences && typeof preferences.emailEnabled !== 'boolean') {
+      const error = 'emailEnabled must be a boolean';
+      console.error(error);
+      return { error };
+    }
+    
+    if ('smsEnabled' in preferences && typeof preferences.smsEnabled !== 'boolean') {
+      const error = 'smsEnabled must be a boolean';
+      console.error(error);
+      return { error };
+    }
+    
+    if ('preferredLanguage' in preferences && !isValidLanguageCode(preferences.preferredLanguage)) {
+      const error = `Invalid language code: ${preferences.preferredLanguage}`;
+      console.error(error);
+      return { error };
+    }
+    
+    // Ensure at least one valid preference field is provided
+    if (!('emailEnabled' in preferences || 'smsEnabled' in preferences || 'preferredLanguage' in preferences)) {
+      const error = 'No valid preference fields provided. Must include emailEnabled, smsEnabled, and/or preferredLanguage.';
+      console.error(error);
+      return { error };
+    }
+    
+    // Create a new preferences object with only validated fields
     const updates = {};
-    const validationErrors = [];
     
-    // Strictly validate email preference
+    // Only include valid preference fields
     if ('emailEnabled' in preferences) {
-      if (typeof preferences.emailEnabled === 'boolean') {
-        updates.emailEnabled = preferences.emailEnabled;
-      } else {
-        const errorMsg = `Invalid value for emailEnabled: ${preferences.emailEnabled}. Must be a boolean.`;
-        validationErrors.push(errorMsg);
-        console.error(errorMsg);
-      }
+      updates.emailEnabled = preferences.emailEnabled;
     }
     
-    // Strictly validate SMS preference  
     if ('smsEnabled' in preferences) {
-      if (typeof preferences.smsEnabled === 'boolean') {
-        updates.smsEnabled = preferences.smsEnabled;
-      } else {
-        const errorMsg = `Invalid value for smsEnabled: ${preferences.smsEnabled}. Must be a boolean.`;
-        validationErrors.push(errorMsg);
-        console.error(errorMsg);
-      }
+      updates.smsEnabled = preferences.smsEnabled;
     }
     
-    // Check for any unexpected fields and report them
-    const validFields = ['emailEnabled', 'smsEnabled'];
-    Object.keys(preferences).forEach(key => {
-      if (!validFields.includes(key)) {
-        const errorMsg = `Unknown preference field: ${key}. Valid fields are: ${validFields.join(', ')}`;
-        validationErrors.push(errorMsg);
-        console.error(errorMsg);
-      }
-    });
-    
-    // If validation errors occurred, return them without updating
-    if (validationErrors.length > 0) {
-      return {
-        error: 'Validation errors occurred',
-        validationErrors,
-        code: 'VALIDATION_ERROR'
-      };
-    }
-    
-    // If no valid updates, return error
-    if (Object.keys(updates).length === 0) {
-      const errorMsg = 'No valid preference fields provided';
-      console.error(errorMsg);
-      return { error: errorMsg, code: 'NO_VALID_FIELDS' };
+    if ('preferredLanguage' in preferences) {
+      updates.preferredLanguage = preferences.preferredLanguage;
     }
     
     // Update the user's preferences
@@ -679,37 +696,53 @@ function toggleChannelPreference(userId, channel) {
     return updateUserPreferences(userId, updates);
   }
 
-  function updateUserPreferences(userId, updates) {
-      // Validate user ID
-      if (!isValidUserId(userId)) {
-        console.error(`Invalid user ID: ${userId}`);
-        return null;
-      }
-
-      // Ensure updates is an object
-      if (!updates || typeof updates !== 'object') {
-        console.error('Updates must be an object');
-        return null;
-      }
-
-      // Get current preferences or defaults
-      const currentPrefs = getUserPreferences(userId);
-
-      // Apply updates
-      const updatedPrefs = {
-        ...currentPrefs,
-        ...updates,
-        updatedAt: new Date().toISOString()
-      };
-
-      // Store updated preferences
-      preferencesStore[userId] = updatedPrefs;
-
-      // Persist to file
-      savePreferences();
-
-      return updatedPrefs;
+  /**
+ * Update a user's notification preferences
+ * 
+ * @param {string} userId - User ID or email
+ * @param {Object} updates - Preference updates to apply
+ * @returns {Object|null} Updated preferences or null if failed
+ */
+function updateUserPreferences(userId, updates) {
+    // Validate user ID
+    if (!isValidUserId(userId)) {
+      console.error(`Invalid user ID: ${userId}`);
+      return null;
     }
+    
+    // Ensure updates is an object
+    if (!updates || typeof updates !== 'object') {
+      console.error('Updates must be an object');
+      return null;
+    }
+    
+    // Validate preferredLanguage if it's being updated
+    if ('preferredLanguage' in updates) {
+      if (!isValidLanguageCode(updates.preferredLanguage)) {
+        console.error(`Invalid language code: ${updates.preferredLanguage}`);
+        // If invalid, default to "en" rather than failing the whole update
+        updates.preferredLanguage = "en";
+      }
+    }
+    
+    // Get current preferences or defaults
+    const currentPrefs = getUserPreferences(userId);
+    
+    // Apply updates
+    const updatedPrefs = {
+      ...currentPrefs,
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Store updated preferences
+    preferencesStore[userId] = updatedPrefs;
+    
+    // Persist to file
+    savePreferences();
+    
+    return updatedPrefs;
+  }
 
     /**
  * Get a list of users who have opted in to a specific notification channel
