@@ -412,97 +412,120 @@ function initializeNewUserWithAllEnabled(userId) {
     return preferences;
   }
   
-  /**
-   * Update an existing user's notification preferences
-   * 
-   * This function specifically updates email and/or SMS preferences, 
-   * creating the user with default values if they don't exist yet.
-   * 
-   * @param {string} userId - User ID or email
-   * @param {Object} preferences - Object containing preference updates
-   * @param {boolean} [preferences.email] - Email notification preference
-   * @param {boolean} [preferences.sms] - SMS notification preference
-   * @returns {Object} Result object with status and updated preferences
-   */
-  function updateNotificationPreferences(userId, preferences = {}) {
+/**
+ * Update preferences for an existing user only
+ * 
+ * Unlike updateUserPreferences, this function will not create a new user
+ * if they don't exist. It only updates existing users.
+ * 
+ * @param {string} userId - User ID or email
+ * @param {Object} preferences - Object containing preferences to update
+ * @param {boolean} [preferences.emailEnabled] - Whether email notifications are enabled
+ * @param {boolean} [preferences.smsEnabled] - Whether SMS notifications are enabled
+ * @returns {Object|{error: string}} - Updated preferences object or error object with details
+ */
+function updateExistingUserPreferences(userId, preferences) {
     // Validate user ID
     if (!isValidUserId(userId)) {
-      return {
-        success: false,
-        message: `Invalid user ID: ${userId}`,
-        preferences: null
-      };
+      const errorMsg = `Invalid user ID: ${userId}`;
+      console.error(errorMsg);
+      return { error: errorMsg, code: 'INVALID_USER_ID' };
     }
     
     // Validate preferences object
-    if (!preferences || typeof preferences !== 'object') {
-      return {
-        success: false,
-        message: 'Preferences must be an object',
-        preferences: null
-      };
+    if (!preferences) {
+      const errorMsg = 'Preferences cannot be null or undefined';
+      console.error(errorMsg);
+      return { error: errorMsg, code: 'MISSING_PREFERENCES' };
     }
     
-    // Extract and validate email and SMS preferences
+    if (typeof preferences !== 'object' || Array.isArray(preferences)) {
+      const errorMsg = 'Preferences must be a plain object';
+      console.error(errorMsg);
+      return { error: errorMsg, code: 'INVALID_PREFERENCES_TYPE' };
+    }
+    
+    // Check if user exists
+    if (!preferencesStore[userId]) {
+      const errorMsg = `User ${userId} not found in preferences store`;
+      console.error(errorMsg);
+      return { error: errorMsg, code: 'USER_NOT_FOUND' };
+    }
+    
+    // Create a new preferences object with only valid fields
     const updates = {};
-    let hasUpdates = false;
+    const validationErrors = [];
     
-    // Check if email preference is provided and is a boolean
-    if ('email' in preferences) {
-      updates.emailEnabled = Boolean(preferences.email);
-      hasUpdates = true;
+    // Strictly validate email preference
+    if ('emailEnabled' in preferences) {
+      if (typeof preferences.emailEnabled === 'boolean') {
+        updates.emailEnabled = preferences.emailEnabled;
+      } else {
+        const errorMsg = `Invalid value for emailEnabled: ${preferences.emailEnabled}. Must be a boolean.`;
+        validationErrors.push(errorMsg);
+        console.error(errorMsg);
+      }
     }
     
-    // Check if SMS preference is provided and is a boolean
-    if ('sms' in preferences) {
-      updates.smsEnabled = Boolean(preferences.sms);
-      hasUpdates = true;
+    // Strictly validate SMS preference  
+    if ('smsEnabled' in preferences) {
+      if (typeof preferences.smsEnabled === 'boolean') {
+        updates.smsEnabled = preferences.smsEnabled;
+      } else {
+        const errorMsg = `Invalid value for smsEnabled: ${preferences.smsEnabled}. Must be a boolean.`;
+        validationErrors.push(errorMsg);
+        console.error(errorMsg);
+      }
     }
     
-    // If no valid updates were provided
-    if (!hasUpdates) {
+    // Check for any unexpected fields and report them
+    const validFields = ['emailEnabled', 'smsEnabled'];
+    Object.keys(preferences).forEach(key => {
+      if (!validFields.includes(key)) {
+        const errorMsg = `Unknown preference field: ${key}. Valid fields are: ${validFields.join(', ')}`;
+        validationErrors.push(errorMsg);
+        console.error(errorMsg);
+      }
+    });
+    
+    // If validation errors occurred, return them without updating
+    if (validationErrors.length > 0) {
       return {
-        success: false,
-        message: 'No valid preference updates provided',
-        preferences: getUserPreferences(userId)
+        error: 'Validation errors occurred',
+        validationErrors,
+        code: 'VALIDATION_ERROR'
       };
     }
     
-    // Get current preference or create new ones
-    let currentPreferences = preferencesStore[userId];
-    let isNewUser = false;
-    
-    if (!currentPreferences) {
-      // User doesn't exist yet, create with defaults
-      currentPreferences = createDefaultPreferences();
-      isNewUser = true;
+    // If no valid updates, return error
+    if (Object.keys(updates).length === 0) {
+      const errorMsg = 'No valid preference fields provided';
+      console.error(errorMsg);
+      return { error: errorMsg, code: 'NO_VALID_FIELDS' };
     }
     
-    // Apply the updates
-    const updatedPreferences = {
-      ...currentPreferences,
+    // Update the user's preferences
+    const updatedPrefs = {
+      ...preferencesStore[userId],
       ...updates,
       updatedAt: new Date().toISOString()
     };
     
     // Store updated preferences
-    preferencesStore[userId] = updatedPreferences;
+    preferencesStore[userId] = updatedPrefs;
     
-    // Save to file
+    // Persist to file
     savePreferences();
     
-    return {
-      success: true,
-      message: isNewUser ? 'User created with preferences' : 'Preferences updated successfully',
-      preferences: updatedPreferences,
-      updated: updates
-    };
+    return updatedPrefs;
   }
+  
 
   module.exports = {
     createCustomDefaultPreferences,
     createDefaultPreferences,
     initializeNewUser,
-    updateNotificationPreferences,
-    initializeNewUserWithAllEnabled
+    // updateNotificationPreferences,
+    initializeNewUserWithAllEnabled,
+    updateExistingUserPreferences
   };

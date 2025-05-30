@@ -12,7 +12,7 @@ const {sendSms} = require('./notifications/sms');
 const dispatcher = require('./dispatcher');
 const logger = require('./logger');
 const initializeNewUser = require('./user-preferences').initializeNewUser;
-const updateExistingUserPreferences = require('./user-preferences').updateNotificationPreferences;
+const updateExistingUserPreferences = require('./user-preferences').updateExistingUserPreferences;
 // Initialize the notification system
 console.log("Initializing notification system...");
 

@@ -151,3 +151,66 @@ const invalidUpdate = userPreferences.updateNotificationPreferences('john.doe@ex
 console.log("Invalid update attempt:", invalidUpdate);
 
 // Example usage: Export preferences to a custom file
+
+// Example usage: Update existing user's preferences with enhanced validation
+console.log('\n--- Updating Existing User\'s Preferences (Enhanced Validation) ---');
+
+// Test case 1: Update a non-existent user
+console.log('\nTest Case 1: Non-existent user');
+const nonExistentUpdate = userPreferences.updateExistingUserPreferences(
+  'non.existent@example.com', 
+  { emailEnabled: false }
+);
+console.log('Result:', nonExistentUpdate);
+
+// Test case 2: Valid update for an existing user
+console.log('\nTest Case 2: Valid update for existing user');
+const validUpdate = userPreferences.updateExistingUserPreferences(
+  newUser, 
+  { smsEnabled: false }
+);
+console.log('Result:', validUpdate);
+
+// Test case 3: Multiple valid values
+console.log('\nTest Case 3: Multiple valid values');
+const multiUpdate = userPreferences.updateExistingUserPreferences(
+  'jane.doe@example.com',
+  { emailEnabled: true, smsEnabled: true }
+);
+console.log('Result:', multiUpdate);
+
+// Test case 4: Invalid field types
+console.log('\nTest Case 4: Invalid field types');
+const invalidTypeUpdate = userPreferences.updateExistingUserPreferences(
+  newUser,
+  { emailEnabled: "yes", smsEnabled: 1 }  // Non-boolean values
+);
+console.log('Result:', invalidTypeUpdate);
+
+// Test case 5: Unknown fields
+console.log('\nTest Case 5: Unknown fields');
+const unknownFieldUpdate = userPreferences.updateExistingUserPreferences(
+  newUser,
+  { 
+    emailEnabled: true,
+    pushEnabled: true,  // Not a valid field
+    notifications: "all" // Not a valid field
+  }
+);
+console.log('Result:', unknownFieldUpdate);
+
+// Test case 6: Empty update object
+console.log('\nTest Case 6: Empty update object');
+const emptyUpdate = userPreferences.updateExistingUserPreferences(
+  newUser,
+  {}
+);
+console.log('Result:', emptyUpdate);
+
+// Test case 7: Null or invalid input
+console.log('\nTest Case 7: Null input');
+const nullUpdate = userPreferences.updateExistingUserPreferences(
+  newUser,
+  null
+);
+console.log('Result:', nullUpdate);
