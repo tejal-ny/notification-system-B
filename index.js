@@ -26,6 +26,7 @@ const getTemplate = require('./templateUtils').getTemplate;
 const renderTemplate = require('./templateUtils').renderTemplate;
 const templateManager = require('./templateManager');
 const getTemplatesByType = require('./templateUtils').getTemplatesByType;
+const getTemplatesByLanguage = require('./templateUtils').getTemplatesByLanguage;
 // Initialize the notification system
 console.log("Initializing notification system...");
 
@@ -137,9 +138,13 @@ async function sendExampleEmails() {
 
 // Example usage
 async function main() {
-  const structuredTemplates = getTemplatesByType('email', null, { 
-    structuredFormat: true 
-  });
+  const spanishTemplates = getTemplatesByLanguage('es');
+console.log('Spanish template coverage:', spanishTemplates.summary);
+console.log('Number of Spanish email templates:', 
+            Object.keys(spanishTemplates.templates.email || {}).length);
+  // const structuredTemplates = getTemplatesByType('email', null, { 
+  //   structuredFormat: true 
+  // });
   // initializeNewUser("tejal@example.com");
   // getUserPreferences("tejal1@example.com")
   // getChannelOptedInUsers('email')
