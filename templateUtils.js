@@ -292,7 +292,7 @@ const templates = {
   }
   
   // Other functions remain the same...
-  function listAvailableTemplates(type) { /* ... */ }
+//   function listAvailableTemplates(type) { /* ... */ }
   function templateExists(type, name, language) { /* ... */ }
   function addTemplate(type, name, language, templateContent) { /* ... */ }
   
@@ -331,6 +331,166 @@ const templates = {
       return false;
     }
   }
+
+/**
+ * Get all templates for a specific notification type
+ * 
+ * This function retrieves all templates for the specified notification type (e.g., 'email' or 'sms')
+ * and optionally filters them by language. It returns the actual template content rather than just metadata,
+ * making it easy to work with all templates of a specific type.
+ *
+ * @param {string} type - The notification type to retrieve templates for ('email', 'sms', etc.)
+ * @param {string|string[]} [language] - Optional language(s) to filter by
+ * @param {Object} [options] - Additional options
+ * @param {boolean} [options.includeMetadata=false] - Whether to include metadata with each template
+ * @param {boolean} [options.structuredFormat=false] - If true, returns templates in a nested structure
+ * @returns {Object} Object containing all templates of the specified type
+ */
+function getTemplatesByType(type, language, options = {}) {
+    const { includeMetadata = false, structuredFormat = false } = options;
+    
+    // Input validation
+    if (!type) {
+      console.error('Notification type is required');
+      return structuredFormat ? {} : [];
+    }
+    
+    // If templates of this type don't exist
+    if (!templates[type]) {
+      console.warn(`No templates found for type '${type}'`);
+      return structuredFormat ? {} : [];
+    }
+    
+    // Normalize language preferences for filtering
+    const languagePreferences = language ? (Array.isArray(language) 
+      ? language.map(lang => lang.toLowerCase())
+      : [language.toLowerCase()]) 
+      : null;
+  
+    try {
+      // Get all template names for this type
+      const templateNames = Object.keys(templates[type]);
+      
+      // Return in structured format (nested by template name and language)
+      if (structuredFormat) {
+        const result = {};
+        
+        templateNames.forEach(templateName => {
+          // Get available languages for this template
+          const availableLanguages = Object.keys(templates[type][templateName]);
+          
+          // Filter languages if specified
+          const filteredLanguages = languagePreferences 
+            ? availableLanguages.filter(lang => languagePreferences.includes(lang))
+            : availableLanguages;
+            
+          // Skip if no matching languages
+          if (filteredLanguages.length === 0) return;
+          
+          // Add to structured result
+          result[templateName] = {};
+          
+          filteredLanguages.forEach(lang => {
+            const template = templates[type][templateName][lang];
+            
+            if (includeMetadata) {
+              result[templateName][lang] = {
+                template,
+                metadata: {
+                  type,
+                  name: templateName,
+                  language: lang,
+                  isDefault: lang === DEFAULT_LANGUAGE
+                }
+              };
+            } else {
+              result[templateName][lang] = template;
+            }
+          });
+        });
+        
+        return result;
+      } 
+      // Return in flat format (array of templates with metadata)
+      else {
+        const result = [];
+        
+        templateNames.forEach(templateName => {
+          // Get available languages for this template
+          const availableLanguages = Object.keys(templates[type][templateName]);
+          
+          // Filter languages if specified
+          const filteredLanguages = languagePreferences 
+            ? availableLanguages.filter(lang => languagePreferences.includes(lang))
+            : availableLanguages;
+          
+          // Add each template to the result array
+          filteredLanguages.forEach(lang => {
+            const template = templates[type][templateName][lang];
+            
+            if (includeMetadata) {
+              result.push({
+                type,
+                name: templateName,
+                language: lang,
+                isDefault: lang === DEFAULT_LANGUAGE,
+                template
+              });
+            } else {
+              result.push({
+                name: templateName,
+                language: lang,
+                template
+              });
+            }
+          });
+        });
+        
+        return result;
+      }
+    } catch (error) {
+      console.error(`Error retrieving templates for type '${type}':`, error);
+      return structuredFormat ? {} : [];
+    }
+  }
+  
+  /**
+   * List all available templates, optionally filtered by type
+   * 
+   * @param {string} [type] - Optional template type to filter by
+   * @returns {Array} Array of available templates with their metadata
+   */
+  function listAvailableTemplates(type) {
+    try {
+      const result = [];
+      
+      // Determine which types to process
+      const typesToProcess = type ? [type] : Object.keys(templates);
+      
+      // Collect template information
+      typesToProcess.forEach(templateType => {
+        if (!templates[templateType]) return;
+        
+        const templateNames = Object.keys(templates[templateType]);
+        
+        templateNames.forEach(templateName => {
+          const languages = Object.keys(templates[templateType][templateName]);
+          
+          result.push({
+            type: templateType,
+            name: templateName,
+            availableLanguages: languages,
+            defaultLanguage: languages.includes(DEFAULT_LANGUAGE) ? DEFAULT_LANGUAGE : languages[0]
+          });
+        });
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('Error listing templates:', error);
+      return [];
+    }
+  }
   
   // Export the functions
   module.exports = {
@@ -343,5 +503,6 @@ const templates = {
     updateDefaultValues,
     // Export constants
     DEFAULT_LANGUAGE,
-    DEFAULT_VALUES
+    DEFAULT_VALUES,
+    getTemplatesByType
   };

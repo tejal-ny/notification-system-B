@@ -25,6 +25,7 @@ const renderTemplateByLanguage = require('./notificationTemplates').renderTempla
 const getTemplate = require('./templateUtils').getTemplate;
 const renderTemplate = require('./templateUtils').renderTemplate;
 const templateManager = require('./templateManager');
+const getTemplatesByType = require('./templateUtils').getTemplatesByType;
 // Initialize the notification system
 console.log("Initializing notification system...");
 
@@ -136,17 +137,9 @@ async function sendExampleEmails() {
 
 // Example usage
 async function main() {
-  const welcomeEmail = getTemplate('email', 'welcome', 'en');
-if (welcomeEmail) {
-  const rendered = renderTemplate(welcomeEmail, {
-    serviceName: 'MyApp',
-    // userName is missing, will use default "Guest"
-    verificationLink: 'https://myapp.com/verify?token=abc123'
+  const structuredTemplates = getTemplatesByType('email', null, { 
+    structuredFormat: true 
   });
-  
-  console.log('Subject:', rendered.subject);
-  console.log('Body:', rendered.body);
-}
   // initializeNewUser("tejal@example.com");
   // getUserPreferences("tejal1@example.com")
   // getChannelOptedInUsers('email')
