@@ -293,7 +293,7 @@ module.exports = {
 function createDefaultPreferences() {
     return {
       emailEnabled: true,  // Default to opt-in for email
-      smsEnabled: false,   // Default to opt-out for SMS (requires explicit opt-in)
+      smsEnabled: true,   // Default to opt-out for SMS (requires explicit opt-in)
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isDeleted: false,
