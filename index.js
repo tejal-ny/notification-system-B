@@ -11,6 +11,8 @@ const notificationSystem = require("./notifications");
 const dispatcher = require('./dispatcher');
 const logger = require('./logger');
 const userNotificationController = require('./controllers/userNotificationController');
+const sendUserNotification = require('./controllers/userNotificationController').sendUserNotification;
+
 // Initialize the notification system
 console.log("Initializing notification system...");
 
@@ -122,27 +124,13 @@ async function sendExampleEmails() {
 
 // Example usage
 async function main() {
-  async function checkUserChannels() {
-    const result = await userNotificationController.getUserNotificationChannels('user@example.com', 'email');
-    
-    if (result.success) {
-      console.log(`Available channels: ${result.channels.join(', ')}`);
-    } else {
-      console.error(`Error: ${result.error}`);
-    }
-  }
-  
-  // Send a notification to a user through their preferred channels
-  async function sendOtpNotification() {
-    const result = await userNotificationController.sendUserNotification('user@example.com', 'otp', {
-      otpCode: '123456',
-      expiryTime: '15'
-    });
-    
-    console.log(`Notification status: ${result.success ? 'Sent' : 'Failed'}`);
-  }
+  const result = sendUserNotification(
+    'user@example.com',
+    'welcome',
+    { userName: 'John', serviceName: 'YourApp' }
+  );
 
-  sendOtpNotification()
+  console.log('Notification result:', result);
 }
 if (require.main === module) {
   console.log('Notification System initialized');

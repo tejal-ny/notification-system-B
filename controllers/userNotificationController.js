@@ -30,6 +30,39 @@ const TEST_DATA = {
   }
 };
 
+const DEFAULT_TEST_DATA = {
+    serviceName: 'NotifyHub',
+    userName: 'Valued Customer',
+    verificationLink: 'https://example.com/verify?token=sample-token-12345',
+    resetLink: 'https://example.com/reset-password?token=sample-token-12345',
+    supportEmail: 'support@example.com',
+    otpCode: '123456',
+    expiryTime: '15',
+    appointmentDate: '2023-06-15',
+    appointmentTime: '14:30',
+    amount: '$99.99',
+    referenceNumber: 'TRX-123456789'
+  };
+  
+  /**
+   * Renders a template by replacing placeholders with actual values
+   * 
+   * @param {string} template - The template string containing placeholders
+   * @param {Object} data - The data object containing values for placeholders
+   * @returns {string} The rendered template with replaced placeholders
+   */
+  function renderTemplate(template, data) {
+    if (!template) {
+      return '';
+    }
+    
+    // Replace all {{variableName}} placeholders with their values
+    return template.replace(/\{\{([^}]+)\}\}/g, (match, variableName) => {
+      const value = data[variableName];
+      return value !== undefined ? value : match; // Keep placeholder if value is not provided
+    });
+  }
+
 /**
  * Determines which notification channels a user has opted in to
  * and checks eligibility for receiving the requested notification type
@@ -224,89 +257,264 @@ function replaceTemplateVariables(templateString, data) {
 }
 
 /**
- * Sends notifications to a user through their preferred channels
+ * Processes notification for a user based on their preferences
+ * and prepares appropriate personalized templates
+ * 
+ * @param {string} email - The email address of the user
+ * @param {string} notificationType - The type of notification (e.g., 'welcome', 'otp')
+ * @param {Object} [dynamicData={}] - Dynamic data to populate the notification templates
+ * @returns {Promise<Object>} A result object with details about the notification preparation
+ */
+async function processUserNotification(email, notificationType, dynamicData = {}) {
+    // Get user notification channels
+    const channelInfo = await getUserNotificationChannels(email, notificationType);
+    
+    if (!channelInfo.success) {
+      console.log(`Cannot process notification: ${channelInfo.error}`);
+      return {
+        success: false,
+        error: channelInfo.error,
+        details: 'Failed to determine notification channels'
+      };
+    }
+    
+    const { channels, userData } = channelInfo;
+    
+    // If no channels are enabled, log and exit gracefully
+    if (channels.length === 0) {
+      console.log(`User ${email} has not opted in to receive ${notificationType} notifications on any channel`);
+      return {
+        success: false,
+        error: 'No notification channels enabled for this notification type',
+        channels: []
+      };
+    }
+    
+    // Prepare and render templates for enabled channels
+    const templates = prepareNotificationTemplates(notificationType, channels, userData, dynamicData);
+    
+    // Check if we have at least one valid template
+    const hasValidTemplates = Object.values(templates).some(template => template !== null);
+    
+    if (!hasValidTemplates) {
+      console.log(`No valid templates found for ${notificationType} notification`);
+      return {
+        success: false,
+        error: 'No valid templates found for this notification type',
+        channels
+      };
+    }
+    
+    // Log success and return templates and channel info
+    console.log(`Successfully prepared ${channels.join(', ')} personalized templates for ${email}`);
+    
+    return {
+      success: true,
+      message: `Personalized templates prepared successfully for ${channels.length} channel(s)`,
+      channels,
+      userData,
+      notificationType,
+      templates
+    };
+  }
+
+/**
+ * Sends personalized notifications to a user through their preferred channels
  * using mock services for demonstration purposes
  * 
  * @param {string} email - The email address of the user
  * @param {string} notificationType - The type of notification (e.g., 'welcome', 'otp')
- * @param {Object} [data={}] - Data to populate the notification templates
+ * @param {Object} [dynamicData={}] - Dynamic data to personalize the notification templates
+ * @param {Object} [options={}] - Additional options for notification delivery
  * @returns {Promise<Object>} A result object with details about the notification attempts
  */
-async function sendUserNotification(email, notificationType, data = {}) {
-  // Get user notification channels and check eligibility
-  const channelInfo = await getUserNotificationChannels(email, notificationType);
-  
-  if (!channelInfo.success) {
-    console.log(`User ${email} is not eligible to receive ${notificationType} notification: ${channelInfo.error}`);
-    return {
-      success: false,
-      error: channelInfo.error,
-      details: 'User not eligible for this notification type'
-    };
-  }
-  
-  const { channels, userData } = channelInfo;
-  
-  // If no channels are enabled, log that the user has not opted in and exit gracefully
-  if (channels.length === 0) {
-    console.log(`User ${email} has not opted in to receive ${notificationType} notifications on any channel`);
-    return {
-      success: false,
-      error: 'No notification channels enabled for this notification type',
-      channels: [],
-      message: `User has opted out of all channels for this notification type`
-    };
-  }
-  
-  // Load and personalize templates for each channel
-  const personalizedTemplates = loadAndPersonalizeTemplates(
-    notificationType, 
-    userData.language, 
-    channels,
-    {
-      ...userData,
-      ...data
+async function sendUserNotification(email, notificationType, dynamicData = {}, options = {}) {
+    // Validate the input data to ensure proper personalization
+    if (notificationType === 'otp' && !dynamicData.otpCode) {
+      console.log('OTP notification requested without providing an otpCode');
+      // Provide a random OTP code for testing if not supplied
+      dynamicData.otpCode = dynamicData.otpCode || Math.floor(100000 + Math.random() * 900000).toString();
     }
-  );
-  
-  // Check if we have at least one valid template
-  const validChannels = Object.keys(personalizedTemplates);
-  if (validChannels.length === 0) {
-    console.log(`No valid templates found for any eligible channel for ${email}`);
-    return {
-      success: false,
-      error: 'No valid templates found for eligible channels',
-      channels: channels
+    
+    // Process notification templates based on user preferences and personalize them
+    const processResult = processUserNotification(email, notificationType, dynamicData);
+    
+    if (!processResult.success) {
+      return processResult;
+    }
+    
+    const { channels, userData, templates } = processResult;
+    const results = { 
+      success: false, 
+      channels: [], 
+      results: {},
+      // Include template preview for debugging/visibility
+      preview: {} 
     };
+    
+    // Send personalized email if enabled
+    if (channels.includes('email') && templates.email) {
+      try {
+        const { subject, body } = templates.email;
+        
+        console.log(`Sending personalized ${notificationType} email to: ${email}`);
+        console.log(`Email content: Subject: "${subject.substring(0, 30)}..."`);
+        
+        // Store preview for debugging/visibility
+        results.preview.email = {
+          subject,
+          body: body.length > 100 ? `${body.substring(0, 100)}...` : body
+        };
+  
+        // This would normally call the actual email service with personalized content
+        // For now, we'll simulate using a mock service
+        const mockEmailResult = {
+          success: true,
+          messageId: `mock-email-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          sentTo: email
+        };
+        
+        results.results.email = {
+          ...mockEmailResult,
+          subject
+        };
+        
+        console.log(`Successfully sent personalized ${notificationType} email to ${email} [MessageID: ${mockEmailResult.messageId}]`);
+      } catch (error) {
+        console.log(`Failed to send personalized email to ${email}:`, error);
+        results.results.email = {
+          success: false,
+          error: error.message || 'Unknown error'
+        };
+      }
+    }
+    
+    // Send personalized SMS if enabled
+    if (channels.includes('sms') && templates.sms) {
+      try {
+        const { message } = templates.sms;
+        
+        console.log(`Sending personalized ${notificationType} SMS to: ${userData.phone}`);
+        console.log(`SMS content: "${message.substring(0, 50)}..."`);
+        
+        // Store preview for debugging/visibility
+        results.preview.sms = {
+          message: message.length > 100 ? `${message.substring(0, 100)}...` : message
+        };
+        
+        // This would normally call the actual SMS service with personalized content
+        // For now, we'll simulate using a mock service
+        const mockSmsResult = {
+          success: true,
+          messageId: `mock-sms-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          sentTo: userData.phone
+        };
+        
+        results.results.sms = mockSmsResult;
+        
+        console.log(`Successfully sent personalized ${notificationType} SMS to ${userData.phone} [MessageID: ${mockSmsResult.messageId}]`);
+      } catch (error) {
+        console.log(`Failed to send personalized SMS to ${userData.phone}:`, error);
+        results.results.sms = {
+          success: false,
+          error: error.message || 'Unknown error'
+        };
+      }
+    }
+    
+    // Mark overall success if at least one channel succeeded
+    results.success = Object.values(results.results).some(result => result.success);
+    results.channels = channels;
+    
+    return results;
   }
-  
-  // In a real implementation, we would call mock services here
-  // For now, just return the channels and personalized templates
-  
-  // Log successful template preparation
-  console.log(`Successfully prepared templates for ${validChannels.length} channel(s) for ${email}`);
-  validChannels.forEach(channel => {
-    const templateInfo = personalizedTemplates[channel];
-    console.log(`→ ${channel} template (${templateInfo.metadata.selectedLanguage}): Ready to send`);
-  });
-  
-  return {
-    success: true,
-    message: `Notification templates prepared successfully`,
-    channels: validChannels,
-    userData: {
+
+/**
+ * Prepares personalized notification templates for the specified channels based on user preferences
+ * 
+ * @param {string} notificationType - The type of notification (e.g., 'welcome', 'otp')
+ * @param {Array} channels - Array of channels to prepare templates for
+ * @param {Object} userData - User data including language preference
+ * @param {Object} dynamicData - Dynamic data to personalize the templates with
+ * @returns {Object} Object containing personalized templates for each channel
+ */
+function prepareNotificationTemplates(notificationType, channels, userData, dynamicData) {
+    const templates = {};
+    const language = userData.language || 'en';
+    
+    // Merge default test data with user data and provided dynamic data
+    // This prioritizes dynamic data over user data over default data
+    const templateData = {
+      ...DEFAULT_TEST_DATA,
+      // Use user data if available
+      userName: userData.name || DEFAULT_TEST_DATA.userName,
       email: userData.email,
       phone: userData.phone,
-      name: userData.name,
-      language: userData.language
-    },
-    notificationType,
-    templates: personalizedTemplates
-  };
-}
+      // Override with any dynamic data provided
+      ...dynamicData
+    };
+    
+    console.log(`Personalizing templates with data:`, { 
+      notificationType,
+      language,
+      userName: templateData.userName,
+      dynamicFields: Object.keys(dynamicData) 
+    });
+    
+    // Check if email channel is enabled and prepare email template
+    if (channels.includes('email')) {
+      const emailTemplate = getTemplate('email', notificationType, language);
+      
+      if (!emailTemplate) {
+        console.log(`Email template not found for ${notificationType} in ${language} language`);
+        templates.email = null;
+      } else {
+        // Personalize the templates with the data
+        const personalizedSubject = renderTemplate(emailTemplate.subject, templateData);
+        const personalizedBody = renderTemplate(emailTemplate.body, templateData);
+        
+        templates.email = {
+          subject: personalizedSubject,
+          body: personalizedBody,
+          originalSubject: emailTemplate.subject,
+          originalBody: emailTemplate.body,
+          data: templateData
+        };
+        
+        console.log(`Prepared personalized email template for ${notificationType} notification in ${language}`);
+      }
+    }
+    
+    // Check if SMS channel is enabled and prepare SMS template
+    if (channels.includes('sms')) {
+      const smsTemplate = getTemplate('sms', notificationType, language);
+      
+      if (!smsTemplate) {
+        console.log(`SMS template not found for ${notificationType} in ${language} language`);
+        templates.sms = null;
+      } else {
+        // Personalize the SMS template with the data
+        const personalizedMessage = renderTemplate(smsTemplate, templateData);
+        
+        templates.sms = {
+          message: personalizedMessage,
+          originalTemplate: smsTemplate,
+          data: templateData
+        };
+        
+        console.log(`Prepared personalized SMS template for ${notificationType} notification in ${language}`);
+      }
+    }
+    
+    return templates;
+  }
 
 module.exports = {
   getUserNotificationChannels,
   sendUserNotification,
-  loadAndPersonalizeTemplates
+  loadAndPersonalizeTemplates,
+  prepareNotificationTemplates,
+  renderTemplate
 };

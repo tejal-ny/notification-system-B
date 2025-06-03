@@ -2,8 +2,8 @@
   "user@example.com": {
     "emailEnabled": true,
     "smsEnabled": true,
-    "createdAt": "2025-06-03T07:34:06.432Z",
-    "updatedAt": "2025-06-03T07:34:06.433Z",
+    "createdAt": "2025-06-03T10:53:12.668Z",
+    "updatedAt": "2025-06-03T10:53:12.669Z",
     "isDeleted": false,
     "preferredLanguage": "en"
   }
