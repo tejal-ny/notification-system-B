@@ -463,52 +463,137 @@ function prepareNotificationTemplates(notificationType, channels, userData, dyna
       dynamicFields: Object.keys(dynamicData) 
     });
     
-    // Check if email channel is enabled and prepare email template
-    if (channels.includes('email')) {
-      const emailTemplate = getTemplate('email', notificationType, language);
-      
-      if (!emailTemplate) {
-        console.log(`Email template not found for ${notificationType} in ${language} language`);
-        templates.email = null;
-      } else {
-        // Personalize the templates with the data
-        const personalizedSubject = renderTemplate(emailTemplate.subject, templateData);
-        const personalizedBody = renderTemplate(emailTemplate.body, templateData);
-        
-        templates.email = {
-          subject: personalizedSubject,
-          body: personalizedBody,
-          originalSubject: emailTemplate.subject,
-          originalBody: emailTemplate.body,
-          data: templateData
-        };
-        
-        console.log(`Prepared personalized email template for ${notificationType} notification in ${language}`);
-      }
+    // Default fallback language
+  const DEFAULT_LANGUAGE = 'en';
+  
+  // Check if email channel is enabled and prepare email template
+  if (channels.includes('email')) {
+    // Try to get template in user's preferred language
+    let emailTemplate = getTemplate('email', notificationType, language);
+    let usedLanguage = language;
+    let fallbackUsed = false;
+    
+    // If template not found in preferred language, fall back to English
+    if (!emailTemplate && language !== DEFAULT_LANGUAGE) {
+      console.log(`Email template not found for ${notificationType} in ${language} language, falling back to ${DEFAULT_LANGUAGE}`);
+      emailTemplate = getTemplate('email', notificationType, DEFAULT_LANGUAGE);
+      usedLanguage = DEFAULT_LANGUAGE;
+      fallbackUsed = true;
     }
     
-    // Check if SMS channel is enabled and prepare SMS template
-    if (channels.includes('sms')) {
-      const smsTemplate = getTemplate('sms', notificationType, language);
+    if (!emailTemplate) {
+      console.log(`Email template not found for ${notificationType} in any language`);
+      templates.email = null;
+    } else {
+      // Render the subject and body templates with the personalized data
+      const renderedSubject = renderTemplate(emailTemplate.subject, templateData);
+      const renderedBody = renderTemplate(emailTemplate.body, templateData);
       
-      if (!smsTemplate) {
-        console.log(`SMS template not found for ${notificationType} in ${language} language`);
-        templates.sms = null;
+      templates.email = {
+        subject: renderedSubject,
+        body: renderedBody,
+        originalTemplate: emailTemplate,
+        language: usedLanguage,
+        fallbackUsed,
+        data: templateData
+      };
+      
+      if (fallbackUsed) {
+        console.log(`Used fallback ${DEFAULT_LANGUAGE} email template for ${notificationType} notification (user preferred ${language})`);
       } else {
-        // Personalize the SMS template with the data
-        const personalizedMessage = renderTemplate(smsTemplate, templateData);
-        
-        templates.sms = {
-          message: personalizedMessage,
-          originalTemplate: smsTemplate,
-          data: templateData
-        };
-        
-        console.log(`Prepared personalized SMS template for ${notificationType} notification in ${language}`);
+        console.log(`Prepared personalized email template for ${notificationType} notification in ${usedLanguage}`);
       }
+      
+      console.log(`Email subject: "${renderedSubject.substring(0, 30)}..."`);
     }
+  }
+  
+  // Check if SMS channel is enabled and prepare SMS template
+  if (channels.includes('sms')) {
+    // Try to get template in user's preferred language
+    let smsTemplate = getTemplate('sms', notificationType, language);
+    let usedLanguage = language;
+    let fallbackUsed = false;
+    
+    // If template not found in preferred language, fall back to English
+    if (!smsTemplate && language !== DEFAULT_LANGUAGE) {
+      console.log(`SMS template not found for ${notificationType} in ${language} language, falling back to ${DEFAULT_LANGUAGE}`);
+      smsTemplate = getTemplate('sms', notificationType, DEFAULT_LANGUAGE);
+      usedLanguage = DEFAULT_LANGUAGE;
+      fallbackUsed = true;
+    }
+    
+    if (!smsTemplate) {
+      console.log(`SMS template not found for ${notificationType} in any language`);
+      templates.sms = null;
+    } else {
+      // Render the SMS template with the personalized data
+      const renderedMessage = renderTemplate(smsTemplate, templateData);
+      
+      templates.sms = {
+        message: renderedMessage,
+        originalTemplate: smsTemplate,
+        language: usedLanguage,
+        fallbackUsed,
+        data: templateData
+      };
+      
+      if (fallbackUsed) {
+        console.log(`Used fallback ${DEFAULT_LANGUAGE} SMS template for ${notificationType} notification (user preferred ${language})`);
+      } else {
+        console.log(`Prepared personalized SMS template for ${notificationType} notification in ${usedLanguage}`);
+      }
+      
+      console.log(`SMS message (truncated): "${renderedMessage.substring(0, 30)}..."`);
+    }
+  }
     
     return templates;
+  }
+
+  /**
+ * Generates a report about language usage and fallbacks for a notification result
+ * 
+ * @param {Object} result - The result object from sendUserNotification
+ * @returns {Object} A report about language usage
+ */
+function getLanguageReport(result) {
+    if (!result || !result.sentContent) {
+      return {
+        languagesUsed: [],
+        fallbacksUsed: false,
+        details: {}
+      };
+    }
+  
+    const report = {
+      languagesUsed: [],
+      fallbacksUsed: false,
+      details: {}
+    };
+  
+    // Check each channel for language info
+    Object.entries(result.sentContent).forEach(([channel, content]) => {
+      if (content.language) {
+        // Add language to the list if not already there
+        if (!report.languagesUsed.includes(content.language)) {
+          report.languagesUsed.push(content.language);
+        }
+  
+        // Track if fallback was used
+        if (content.fallbackUsed) {
+          report.fallbacksUsed = true;
+        }
+  
+        // Add channel-specific details
+        report.details[channel] = {
+          language: content.language,
+          fallbackUsed: content.fallbackUsed || false
+        };
+      }
+    });
+  
+    return report;
   }
 
 module.exports = {
@@ -516,5 +601,6 @@ module.exports = {
   sendUserNotification,
   loadAndPersonalizeTemplates,
   prepareNotificationTemplates,
-  renderTemplate
+  renderTemplate,
+  getLanguageReport
 };
