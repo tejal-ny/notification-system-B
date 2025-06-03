@@ -8,26 +8,9 @@ const fs = require("fs");
 
 // Import notification modules
 const notificationSystem = require("./notifications");
-const {sendSms} = require('./notifications/sms');
 const dispatcher = require('./dispatcher');
 const logger = require('./logger');
-const initializeNewUser = require('./user-preferences').initializeNewUser;
-const updateExistingUserPreferences = require('./user-preferences').updateExistingUserPreferences;
-const getOrCreateUserPreferences = require('./user-preferences').getOrCreateUserPreferences;
-const initializeUsersWithDefaultPreferences = require('./user-preferences').initializeUsersWithDefaultPreferences;
-const toggleChannelPreference = require('./user-preferences').toggleChannelPreference;
-const getChannelOptedInUsers = require('./user-preferences').getChannelOptedInUsers;
-const getUserPreferences = require('./user-preferences').getUserPreferences;
-const notificationTemplates = require('./notificationTemplates').notificationTemplates;
-// const renderTemplate = require('./notificationTemplates').renderTemplate;
-const sendNotificationWithTemplate = require('./notificationTemplates').sendNotificationWithTemplate;
-const renderTemplateByLanguage = require('./notificationTemplates').renderTemplateByLanguage;
-const getTemplate = require('./templateUtils').getTemplate;
-const renderTemplate = require('./templateUtils').renderTemplate;
-const templateManager = require('./templateManager');
-const getTemplatesByType = require('./templateUtils').getTemplatesByType;
-const getTemplatesByLanguage = require('./templateUtils').getTemplatesByLanguage;
-const verifyTemplateConsistency = require('./templateUtils').verifyTemplateConsistency;
+const userNotificationController = require('./controllers/userNotificationController');
 // Initialize the notification system
 console.log("Initializing notification system...");
 
@@ -139,30 +122,27 @@ async function sendExampleEmails() {
 
 // Example usage
 async function main() {
-  const welcomeVerification = verifyTemplateConsistency('welcome');
-  console.log('Welcome template consistency check:', welcomeVerification);
-  // const structuredTemplates = getTemplatesByType('email', null, { 
-  //   structuredFormat: true 
-  // });
-  // initializeNewUser("tejal@example.com");
-  // getUserPreferences("tejal1@example.com")
-  // getChannelOptedInUsers('email')
-  // toggleChannelPreference('tejal1@example.com', 'email');
-  // initializeUsersWithDefaultPreferences(['tejal1@example.com', 'tejal2@example.com'])
-  // updateExistingUserPreferences("tejal@example.com", {
-  //   email: false,
-  //   sms: true
-  // });
-  // try {
-  //   const recipientNumber = '+1234567890';
-  //   const message = 'Hello! This is a test message.';
+  async function checkUserChannels() {
+    const result = await userNotificationController.getUserNotificationChannels('user@example.com', 'email');
     
-  //   await sendSms(recipientNumber, message);
-  //   console.log('Message sent successfully.');
-  // } catch (error) {
-  //   console.error('Application error:', error.message);
-  //   process.exit(1);
-  // }
+    if (result.success) {
+      console.log(`Available channels: ${result.channels.join(', ')}`);
+    } else {
+      console.error(`Error: ${result.error}`);
+    }
+  }
+  
+  // Send a notification to a user through their preferred channels
+  async function sendOtpNotification() {
+    const result = await userNotificationController.sendUserNotification('user@example.com', 'otp', {
+      otpCode: '123456',
+      expiryTime: '15'
+    });
+    
+    console.log(`Notification status: ${result.success ? 'Sent' : 'Failed'}`);
+  }
+
+  sendOtpNotification()
 }
 if (require.main === module) {
   console.log('Notification System initialized');
