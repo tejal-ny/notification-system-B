@@ -35,17 +35,32 @@ function trackNotification({ userId, channel, message, recipient, status, metada
   
   // Use provided timestamp or generate one if not provided
   const notificationTimestamp = timestamp || new Date().toISOString();
+
+  // Check if message needs to be truncated (exceeds 100 characters)
+  let truncated = false;
+  let truncatedMessage = message;
+  const MAX_MESSAGE_LENGTH = 100;
+  
+  if (message && typeof message === 'string' && message.length > MAX_MESSAGE_LENGTH) {
+    truncatedMessage = message.substring(0, MAX_MESSAGE_LENGTH);
+    truncated = true;
+  }
   
   // Create the complete notification object with ID and status
   const notification = {
     notificationId,
     userId,
     channel,
-    message,
+    message: truncatedMessage,
     recipient, // The contact detail the message was sent to
     status, // This should be either 'sent' or 'failed'
     timestamp: notificationTimestamp
   };
+  
+  // Add truncation flag if message was shortened
+  if (truncated) {
+    notification.truncated = true;
+  }
   
   // Add metadata if provided
   if (metadata && typeof metadata === 'object') {
