@@ -2,40 +2,40 @@
   "john.doe@example.com": {
     "emailEnabled": true,
     "smsEnabled": true,
-    "createdAt": "2025-06-04T01:43:20.015Z",
-    "updatedAt": "2025-06-04T01:43:20.029Z",
+    "createdAt": "2025-06-04T03:19:48.837Z",
+    "updatedAt": "2025-06-04T03:19:48.839Z",
     "isDeleted": false,
     "preferredLanguage": "en"
   },
   "maria.garcia@example.com": {
     "emailEnabled": true,
     "smsEnabled": true,
-    "createdAt": "2025-06-04T01:43:20.032Z",
-    "updatedAt": "2025-06-04T01:43:20.032Z",
+    "createdAt": "2025-06-04T03:19:48.841Z",
+    "updatedAt": "2025-06-04T03:19:48.841Z",
     "isDeleted": false,
     "preferredLanguage": "en"
   },
   "jean.dupont@example.com": {
     "emailEnabled": true,
     "smsEnabled": true,
-    "createdAt": "2025-06-04T01:43:20.033Z",
-    "updatedAt": "2025-06-04T01:43:20.033Z",
+    "createdAt": "2025-06-04T03:19:48.841Z",
+    "updatedAt": "2025-06-04T03:19:48.841Z",
     "isDeleted": false,
     "preferredLanguage": "en"
   },
   "invalid-email": {
     "emailEnabled": true,
     "smsEnabled": true,
-    "createdAt": "2025-06-04T01:43:20.033Z",
-    "updatedAt": "2025-06-04T01:43:20.033Z",
+    "createdAt": "2025-06-04T03:19:48.842Z",
+    "updatedAt": "2025-06-04T03:19:48.842Z",
     "isDeleted": false,
     "preferredLanguage": "en"
   },
   "unknown.user@example.com": {
     "emailEnabled": true,
     "smsEnabled": true,
-    "createdAt": "2025-06-04T01:43:20.034Z",
-    "updatedAt": "2025-06-04T01:43:20.034Z",
+    "createdAt": "2025-06-04T03:19:48.844Z",
+    "updatedAt": "2025-06-04T03:19:48.844Z",
     "isDeleted": false,
     "preferredLanguage": "en"
   }

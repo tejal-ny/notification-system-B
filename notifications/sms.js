@@ -361,5 +361,6 @@ module.exports = {
   sendSms,
   send,
   sendWithErrorHandling,
-  validateEnvVars
+  validateEnvVars,
+  sendSmsMock
 };

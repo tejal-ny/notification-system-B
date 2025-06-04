@@ -262,5 +262,6 @@ module.exports = {
   sendEmail,
   send,
   sendWithErrorHandling,
+  sendEmailMock,
   validateRecipients, // Export for testing
 };
