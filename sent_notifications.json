@@ -1,40 +1,11 @@
 [
   {
-    "userId": "example-user",
-    "channel": "email",
-    "message": "This is a test notification",
-    "timestamp": "2025-06-04T10:43:09.552Z"
-  },
-  {
-    "notificationId": "1749036671146",
-    "userId": "example-user",
-    "channel": "email",
-    "message": "This is a test notification",
-    "timestamp": "2025-06-04T11:31:11.132Z"
-  },
-  {
-    "notificationId": 1749037599205,
-    "userId": "example-user",
-    "channel": "email",
-    "message": "This is a test notification",
-    "timestamp": "2025-06-04T11:46:39.196Z",
-    "status": "sent"
-  },
-  {
-    "notificationId": 1749037873788,
-    "userId": "example-user",
-    "channel": "email",
-    "message": "This is a test notification",
-    "timestamp": "2025-06-04T11:51:13.788Z",
-    "status": "sent"
-  },
-  {
-    "notificationId": 1749038417623,
+    "notificationId": 1749039150819,
     "userId": "example-user",
     "channel": "email",
     "message": "This is a test notification",
     "status": "sent",
     "recipient": "tejal@example.com",
-    "timestamp": "2025-06-04T12:00:17.624Z"
+    "timestamp": "2025-06-04T12:12:30.819Z"
   }
 ]

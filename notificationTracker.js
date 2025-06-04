@@ -53,20 +53,35 @@ function trackNotification({ userId, channel, message, status, recipient, timest
   try {
     let notifications = [];
     
-    // Check if file exists
-    if (fs.existsSync(NOTIFICATION_FILE)) {
-      // Read existing notifications
-      const fileContent = fs.readFileSync(NOTIFICATION_FILE, 'utf8');
-      notifications = JSON.parse(fileContent);
+    try {
+      // Check if file exists and read existing notifications
+      if (fs.existsSync(NOTIFICATION_FILE)) {
+        const fileContent = fs.readFileSync(NOTIFICATION_FILE, 'utf8');
+        notifications = JSON.parse(fileContent);
+        
+        // Validate that we have an array
+        if (!Array.isArray(notifications)) {
+          console.error('Invalid notification file format: expected an array');
+          notifications = []; // Reset to empty array if format is invalid
+        }
+      }
+    } catch (readError) {
+      console.error('Error reading notification file:', readError);
+      // Continue with an empty array if reading fails
     }
     
     // Add new notification
     notifications.push(notification);
     
-    // Write back to file
-    fs.writeFileSync(NOTIFICATION_FILE, JSON.stringify(notifications, null, 2), 'utf8');
+    try {
+      // Write back to file
+      fs.writeFileSync(NOTIFICATION_FILE, JSON.stringify(notifications, null, 2), 'utf8');
+    } catch (writeError) {
+      console.error('Error writing to notification file:', writeError);
+    }
   } catch (error) {
-    console.error('Error storing notification:', error);
+    // Catch any other unexpected errors in the overall process
+    console.error('Unexpected error in notification tracking:', error);
   }
 }
 
