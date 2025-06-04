@@ -12,6 +12,7 @@ const dispatcher = require('./dispatcher');
 const logger = require('./logger');
 const userNotificationController = require('./controllers/userNotificationController');
 const sendUserNotification = require('./controllers/userNotificationController').sendUserNotification;
+const sendBulkNotification = require('./controllers/userNotificationController').sendBulkNotification;
 
 // Initialize the notification system
 console.log("Initializing notification system...");
@@ -124,13 +125,28 @@ async function sendExampleEmails() {
 
 // Example usage
 async function main() {
-  const result = sendUserNotification(
-    'user@example.com',
-    'welcome',
-    { userName: 'John', serviceName: 'YourApp' }
-  );
-
-  console.log('Notification result:', result);
+  const emails = [
+    'john.doe@example.com',
+    'maria.garcia@example.com',
+    'jean.dupont@example.com',
+    'invalid-email',  // This one should be handled gracefully
+    'unknown.user@example.com'  // User without preferences
+  ];
+  
+  const data = {
+    serviceName: 'MyApp',
+    verificationLink: 'https://myapp.com/verify?token=bulk-signup-2023',
+    supportEmail: 'support@myapp.com'
+  };
+  
+  console.log(`Sending bulk welcome notifications to ${emails.length} users...`);
+  const result = sendBulkNotification(emails, 'welcome', data);
+  
+  console.log('Bulk notification summary:');
+  console.log(`- Total users: ${result.totalUsers}`);
+  console.log(`- Successfully processed: ${result.successful}`);
+  console.log(`- Failed: ${result.failed}`);
+  console.log(`- Success rate: ${result.successRate}`);
 }
 if (require.main === module) {
   console.log('Notification System initialized');

@@ -1,9 +1,41 @@
 {
-  "user@example.com": {
+  "john.doe@example.com": {
     "emailEnabled": true,
     "smsEnabled": true,
-    "createdAt": "2025-06-04T01:16:12.195Z",
-    "updatedAt": "2025-06-04T01:16:12.203Z",
+    "createdAt": "2025-06-04T01:43:20.015Z",
+    "updatedAt": "2025-06-04T01:43:20.029Z",
+    "isDeleted": false,
+    "preferredLanguage": "en"
+  },
+  "maria.garcia@example.com": {
+    "emailEnabled": true,
+    "smsEnabled": true,
+    "createdAt": "2025-06-04T01:43:20.032Z",
+    "updatedAt": "2025-06-04T01:43:20.032Z",
+    "isDeleted": false,
+    "preferredLanguage": "en"
+  },
+  "jean.dupont@example.com": {
+    "emailEnabled": true,
+    "smsEnabled": true,
+    "createdAt": "2025-06-04T01:43:20.033Z",
+    "updatedAt": "2025-06-04T01:43:20.033Z",
+    "isDeleted": false,
+    "preferredLanguage": "en"
+  },
+  "invalid-email": {
+    "emailEnabled": true,
+    "smsEnabled": true,
+    "createdAt": "2025-06-04T01:43:20.033Z",
+    "updatedAt": "2025-06-04T01:43:20.033Z",
+    "isDeleted": false,
+    "preferredLanguage": "en"
+  },
+  "unknown.user@example.com": {
+    "emailEnabled": true,
+    "smsEnabled": true,
+    "createdAt": "2025-06-04T01:43:20.034Z",
+    "updatedAt": "2025-06-04T01:43:20.034Z",
     "isDeleted": false,
     "preferredLanguage": "en"
   }
