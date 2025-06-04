@@ -258,7 +258,7 @@ function replaceTemplateVariables(templateString, data) {
 
 /**
  * Processes notification for a user based on their preferences
- * and prepares appropriate personalized templates
+ * and prepares appropriate personalized templates with comprehensive error handling
  * 
  * @param {string} email - The email address of the user
  * @param {string} notificationType - The type of notification (e.g., 'welcome', 'otp')
@@ -266,169 +266,485 @@ function replaceTemplateVariables(templateString, data) {
  * @returns {Promise<Object>} A result object with details about the notification preparation
  */
 async function processUserNotification(email, notificationType, dynamicData = {}) {
-    // Get user notification channels
-    const channelInfo = await getUserNotificationChannels(email, notificationType);
-    
-    if (!channelInfo.success) {
-      console.log(`Cannot process notification: ${channelInfo.error}`);
+    try {
+      // Input validation
+      if (!email) {
+        const errorMsg = 'Email address is required for processing notification';
+        console.log(errorMsg);
+        return {
+          success: false,
+          error: errorMsg,
+          errorCode: 'MISSING_EMAIL',
+          details: 'Email address must be provided to identify the user'
+        };
+      }
+      
+      if (!notificationType) {
+        const errorMsg = 'Notification type is required for processing notification';
+        console.log(errorMsg);
+        return {
+          success: false,
+          error: errorMsg,
+          errorCode: 'MISSING_NOTIFICATION_TYPE',
+          details: 'A valid notification type (e.g., otp, welcome) must be specified'
+        };
+      }
+      
+      // Get user notification channels
+      let channelInfo;
+      try {
+        channelInfo = await getUserNotificationChannels(email, notificationType);
+      } catch (error) {
+        console.log(`Error fetching user notification channels: ${error.message}`, error);
+        return {
+          success: false,
+          error: 'Failed to retrieve user notification preferences',
+          errorCode: 'PREFERENCE_RETRIEVAL_ERROR',
+          details: error.message,
+          originalError: error
+        };
+      }
+      
+      if (!channelInfo.success) {
+        console.log(`Cannot process notification: ${channelInfo.error}`);
+        return {
+          success: false,
+          error: channelInfo.error,
+          errorCode: channelInfo.errorCode || 'CHANNEL_INFO_ERROR',
+          details: 'Failed to determine notification channels'
+        };
+      }
+      
+      const { channels, userData } = channelInfo;
+      
+      // If no channels are enabled, log and exit gracefully
+      if (channels.length === 0) {
+        const infoMsg = `User ${email} has not opted in to receive ${notificationType} notifications on any channel`;
+        console.log(infoMsg);
+        return {
+          success: false,
+          error: 'No notification channels enabled for this notification type',
+          errorCode: 'NO_ENABLED_CHANNELS',
+          details: infoMsg,
+          channels: []
+        };
+      }
+      
+      // Prepare and render templates for enabled channels
+      let templates;
+      try {
+        templates = prepareNotificationTemplates(notificationType, channels, userData, dynamicData);
+      } catch (error) {
+        console.log(`Error preparing templates for ${notificationType}: ${error.message}`, error);
+        return {
+          success: false,
+          error: 'Failed to prepare notification templates',
+          errorCode: 'TEMPLATE_PREPARATION_ERROR',
+          details: error.message,
+          originalError: error,
+          channels
+        };
+      }
+      
+      // Check if we have at least one valid template
+      const hasValidTemplates = Object.values(templates).some(template => template !== null);
+      
+      if (!hasValidTemplates) {
+        const errorMsg = `No valid templates found for ${notificationType} notification`;
+        console.log(errorMsg);
+        return {
+          success: false,
+          error: 'No valid templates found for this notification type',
+          errorCode: 'NO_VALID_TEMPLATES',
+          details: errorMsg,
+          channels
+        };
+      }
+      
+      // Check each template type
+      channels.forEach(channel => {
+        if (!templates[channel]) {
+          console.log(`No ${channel} template available for ${notificationType} notification`);
+        }
+      });
+      
+      // Log success and return templates and channel info
+      console.log(`Successfully prepared ${channels.join(', ')} personalized templates for ${email}`);
+      
+      return {
+        success: true,
+        message: `Personalized templates prepared successfully for ${channels.length} channel(s)`,
+        channels,
+        userData,
+        notificationType,
+        templates
+      };
+    } catch (error) {
+      // Catch any unexpected errors
+      const errorMsg = `Unexpected error processing ${notificationType} notification for ${email}: ${error.message}`;
+      console.log(errorMsg, error);
       return {
         success: false,
-        error: channelInfo.error,
-        details: 'Failed to determine notification channels'
+        error: 'Failed to process notification',
+        errorCode: 'UNEXPECTED_ERROR',
+        details: error.message,
+        originalError: error
       };
     }
-    
-    const { channels, userData } = channelInfo;
-    
-    // If no channels are enabled, log and exit gracefully
-    if (channels.length === 0) {
-      console.log(`User ${email} has not opted in to receive ${notificationType} notifications on any channel`);
-      return {
-        success: false,
-        error: 'No notification channels enabled for this notification type',
-        channels: []
-      };
-    }
-    
-    // Prepare and render templates for enabled channels
-    const templates = prepareNotificationTemplates(notificationType, channels, userData, dynamicData);
-    
-    // Check if we have at least one valid template
-    const hasValidTemplates = Object.values(templates).some(template => template !== null);
-    
-    if (!hasValidTemplates) {
-      console.log(`No valid templates found for ${notificationType} notification`);
-      return {
-        success: false,
-        error: 'No valid templates found for this notification type',
-        channels
-      };
-    }
-    
-    // Log success and return templates and channel info
-    console.log(`Successfully prepared ${channels.join(', ')} personalized templates for ${email}`);
-    
-    return {
-      success: true,
-      message: `Personalized templates prepared successfully for ${channels.length} channel(s)`,
-      channels,
-      userData,
-      notificationType,
-      templates
-    };
   }
 
 /**
  * Sends personalized notifications to a user through their preferred channels
- * using mock services for demonstration purposes
+ * using mock services for demonstration purposes with robust error handling
  * 
  * @param {string} email - The email address of the user
  * @param {string} notificationType - The type of notification (e.g., 'welcome', 'otp')
- * @param {Object} [dynamicData={}] - Dynamic data to personalize the notification templates
- * @param {Object} [options={}] - Additional options for notification delivery
+ * @param {Object} [dynamicData={}] - Dynamic data to populate the notification templates
  * @returns {Promise<Object>} A result object with details about the notification attempts
  */
-async function sendUserNotification(email, notificationType, dynamicData = {}, options = {}) {
-    // Validate the input data to ensure proper personalization
-    if (notificationType === 'otp' && !dynamicData.otpCode) {
-      console.log('OTP notification requested without providing an otpCode');
-      // Provide a random OTP code for testing if not supplied
-      dynamicData.otpCode = dynamicData.otpCode || Math.floor(100000 + Math.random() * 900000).toString();
-    }
-    
-    // Process notification templates based on user preferences and personalize them
-    const processResult = processUserNotification(email, notificationType, dynamicData);
-    
-    if (!processResult.success) {
-      return processResult;
-    }
-    
-    const { channels, userData, templates } = processResult;
-    const results = { 
-      success: false, 
-      channels: [], 
-      results: {},
-      // Include template preview for debugging/visibility
-      preview: {} 
-    };
-    
-    // Send personalized email if enabled
-    if (channels.includes('email') && templates.email) {
-      try {
-        const { subject, body } = templates.email;
-        
-        console.log(`Sending personalized ${notificationType} email to: ${email}`);
-        console.log(`Email content: Subject: "${subject.substring(0, 30)}..."`);
-        
-        // Store preview for debugging/visibility
-        results.preview.email = {
-          subject,
-          body: body.length > 100 ? `${body.substring(0, 100)}...` : body
+async function sendUserNotification(email, notificationType, dynamicData = {}) {
+    try {
+      // Validate required parameters
+      if (!email) {
+        console.log('Email address is required for sending notification');
+        return {
+          success: false,
+          error: 'Email address is required',
+          errorCode: 'MISSING_EMAIL',
+          details: 'Email address must be provided to identify the recipient'
         };
+      }
+      
+      if (!notificationType) {
+        console.log('Notification type is required for sending notification');
+        return {
+          success: false,
+          error: 'Notification type is required',
+          errorCode: 'MISSING_NOTIFICATION_TYPE',
+          details: 'A valid notification type (e.g., otp, welcome) must be specified'
+        };
+      }
+      
+      // Process and create personalized notification templates based on user preferences
+      let processResult;
+      try {
+        processResult = await processUserNotification(email, notificationType, dynamicData);
+      } catch (error) {
+        console.log(`Error processing notification: ${error.message}`, error);
+        return {
+          success: false,
+          error: 'Failed to process notification',
+          errorCode: 'PROCESS_ERROR',
+          details: error.message,
+          originalError: error
+        };
+      }
+      
+      if (!processResult.success) {
+        return {
+          ...processResult,
+          source: 'processUserNotification'
+        };
+      }
+      
+      const { channels, userData, templates } = processResult;
+      const results = { 
+        success: false, 
+        channels: [],
+        results: {},
+        sentContent: {}, // Store snippets of the actual content sent
+        errors: []       // Collection of all errors encountered
+      };
+      
+      // Use mock services to send through enabled channels
+      
+      // Send email if enabled
+      if (channels.includes('email')) {
+        if (!templates.email) {
+          const errorMsg = `Email template not available for ${notificationType} notification`;
+          console.log(errorMsg);
+          results.results.email = {
+            success: false,
+            error: 'Template not available',
+            errorCode: 'MISSING_EMAIL_TEMPLATE',
+            details: errorMsg,
+            timestamp: new Date().toISOString()
+          };
+          results.errors.push({
+            channel: 'email',
+            error: 'Template not available',
+            errorCode: 'MISSING_EMAIL_TEMPLATE'
+          });
+        } else if (!email || !validateEmailFormat(email)) {
+          const errorMsg = `Invalid email address format: ${email}`;
+          console.log(errorMsg);
+          results.results.email = {
+            success: false,
+            error: 'Invalid email address',
+            errorCode: 'INVALID_EMAIL_FORMAT',
+            details: errorMsg,
+            timestamp: new Date().toISOString()
+          };
+          results.errors.push({
+            channel: 'email',
+            error: 'Invalid email address',
+            errorCode: 'INVALID_EMAIL_FORMAT'
+          });
+        } else {
+          try {
+            const fallbackInfo = templates.email.fallbackUsed 
+              ? ` using fallback language (${templates.email.language})` 
+              : '';
+            
+            console.log(`Sending personalized ${notificationType} email to: ${email}${fallbackInfo}`);
+            
+            try {
+              // In a real implementation, we would call an actual email service here
+              // For mock purposes, we'll log and simulate a successful send
+              
+              // This is where the actual email service would be called with the rendered templates
+              // emailService.send({
+              //   to: email,
+              //   subject: templates.email.subject,
+              //   body: templates.email.body,
+              //   isHtml: false
+              // });
+              
+              // Simulate possible dispatch errors (5% chance of failure for testing)
+              if (Math.random() < 0.05) {
+                throw new Error('Simulated email service temporary failure');
+              }
+              
+              results.results.email = {
+                success: true,
+                messageId: `mock-email-${Date.now()}`,
+                sentTo: email,
+                subject: templates.email.subject,
+                language: templates.email.language,
+                fallbackUsed: templates.email.fallbackUsed,
+                timestamp: new Date().toISOString()
+              };
+              
+              // Store a preview of the rendered content
+              results.sentContent.email = {
+                subject: templates.email.subject,
+                body: templates.email.body.substring(0, 100) + (templates.email.body.length > 100 ? '...' : ''),
+                language: templates.email.language,
+                fallbackUsed: templates.email.fallbackUsed
+              };
+              
+              console.log(`Successfully sent personalized ${notificationType} email to ${email}${fallbackInfo}`);
+            } catch (dispatchError) {
+              // Handle errors specifically related to the dispatch process
+              const errorMsg = `Email dispatch error: ${dispatchError.message}`;
+              console.log(errorMsg, dispatchError);
+              
+              results.results.email = {
+                success: false,
+                error: 'Failed to dispatch email',
+                errorCode: 'EMAIL_DISPATCH_ERROR',
+                details: dispatchError.message,
+                timestamp: new Date().toISOString()
+              };
+              
+              results.errors.push({
+                channel: 'email',
+                error: 'Failed to dispatch email',
+                errorCode: 'EMAIL_DISPATCH_ERROR',
+                details: dispatchError.message
+              });
+            }
+          } catch (error) {
+            // Handle any other errors in the email sending process
+            const errorMsg = `Unexpected error sending email to ${email}: ${error.message}`;
+            console.log(errorMsg, error);
+            
+            results.results.email = {
+              success: false,
+              error: 'Email notification failed',
+              errorCode: 'EMAIL_NOTIFICATION_ERROR',
+              details: error.message,
+              timestamp: new Date().toISOString()
+            };
+            
+            results.errors.push({
+              channel: 'email',
+              error: 'Email notification failed',
+              errorCode: 'EMAIL_NOTIFICATION_ERROR',
+              details: error.message
+            });
+          }
+        }
+      }
+      
+      // Send SMS if enabled
+      if (channels.includes('sms')) {
+        if (!templates.sms) {
+          const errorMsg = `SMS template not available for ${notificationType} notification`;
+          console.log(errorMsg);
+          results.results.sms = {
+            success: false,
+            error: 'Template not available',
+            errorCode: 'MISSING_SMS_TEMPLATE',
+            details: errorMsg,
+            timestamp: new Date().toISOString()
+          };
+          results.errors.push({
+            channel: 'sms',
+            error: 'Template not available',
+            errorCode: 'MISSING_SMS_TEMPLATE'
+          });
+        } else if (!userData.phone || !validatePhoneFormat(userData.phone)) {
+          const errorMsg = `Invalid phone number format: ${userData.phone}`;
+          console.log(errorMsg);
+          results.results.sms = {
+            success: false,
+            error: 'Invalid phone number',
+            errorCode: 'INVALID_PHONE_FORMAT',
+            details: errorMsg,
+            timestamp: new Date().toISOString()
+          };
+          results.errors.push({
+            channel: 'sms',
+            error: 'Invalid phone number',
+            errorCode: 'INVALID_PHONE_FORMAT'
+          });
+        } else {
+          try {
+            const fallbackInfo = templates.sms.fallbackUsed 
+              ? ` using fallback language (${templates.sms.language})` 
+              : '';
+              
+            console.log(`Sending personalized ${notificationType} SMS to: ${userData.phone}${fallbackInfo}`);
+            
+            try {
+              // In a real implementation, we would call an actual SMS service here
+              // For mock purposes, we'll log and simulate a successful send
+              
+              // This is where the actual SMS service would be called with the rendered message
+              // smsService.send({
+              //   to: userData.phone,
+              //   message: templates.sms.message
+              // });
+              
+              // Simulate possible dispatch errors (5% chance of failure for testing)
+              if (Math.random() < 0.05) {
+                throw new Error('Simulated SMS service temporary failure');
+              }
+              
+              results.results.sms = {
+                success: true,
+                messageId: `mock-sms-${Date.now()}`,
+                sentTo: userData.phone,
+                language: templates.sms.language,
+                fallbackUsed: templates.sms.fallbackUsed,
+                timestamp: new Date().toISOString()
+              };
+              
+              // Store a preview of the rendered content
+              results.sentContent.sms = {
+                message: templates.sms.message.substring(0, 100) + (templates.sms.message.length > 100 ? '...' : ''),
+                language: templates.sms.language,
+                fallbackUsed: templates.sms.fallbackUsed
+              };
+              
+              console.log(`Successfully sent personalized ${notificationType} SMS to ${userData.phone}${fallbackInfo}`);
+            } catch (dispatchError) {
+              // Handle errors specifically related to the dispatch process
+              const errorMsg = `SMS dispatch error: ${dispatchError.message}`;
+              console.log(errorMsg, dispatchError);
+              
+              results.results.sms = {
+                success: false,
+                error: 'Failed to dispatch SMS',
+                errorCode: 'SMS_DISPATCH_ERROR',
+                details: dispatchError.message,
+                timestamp: new Date().toISOString()
+              };
+              
+              results.errors.push({
+                channel: 'sms',
+                error: 'Failed to dispatch SMS',
+                errorCode: 'SMS_DISPATCH_ERROR',
+                details: dispatchError.message
+              });
+            }
+          } catch (error) {
+            // Handle any other errors in the SMS sending process
+            const errorMsg = `Unexpected error sending SMS to ${userData.phone}: ${error.message}`;
+            console.log(errorMsg, error);
+            
+            results.results.sms = {
+              success: false,
+              error: 'SMS notification failed',
+              errorCode: 'SMS_NOTIFICATION_ERROR',
+              details: error.message,
+              timestamp: new Date().toISOString()
+            };
+            
+            results.errors.push({
+              channel: 'sms',
+              error: 'SMS notification failed',
+              errorCode: 'SMS_NOTIFICATION_ERROR',
+              details: error.message
+            });
+          }
+        }
+      }
+      
+      // Mark overall success if at least one channel succeeded
+      results.success = Object.values(results.results).some(result => result.success);
+      results.channels = channels;
+      results.attemptedChannels = Object.keys(results.results);
+      results.successfulChannels = Object.entries(results.results)
+        .filter(([_, result]) => result.success)
+        .map(([channel, _]) => channel);
+      
+      // Include information about partial success
+      if (results.success && results.errors.length > 0) {
+        results.partialSuccess = true;
+        results.partialSuccessDetails = `Successfully delivered to ${results.successfulChannels.length} of ${results.attemptedChannels.length} channels`;
+      }
+      
+      return results;
+    } catch (error) {
+      // Catch any unexpected errors in the overall process
+      const errorMsg = `Unexpected error in notification process for ${email}: ${error.message}`;
+      console.log(errorMsg, error);
+      
+      return {
+        success: false,
+        error: 'Failed to process notification request',
+        errorCode: 'NOTIFICATION_PROCESS_ERROR',
+        details: error.message,
+        originalError: error
+      };
+    }
+  }
   
-        // This would normally call the actual email service with personalized content
-        // For now, we'll simulate using a mock service
-        const mockEmailResult = {
-          success: true,
-          messageId: `mock-email-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          sentTo: email
-        };
-        
-        results.results.email = {
-          ...mockEmailResult,
-          subject
-        };
-        
-        console.log(`Successfully sent personalized ${notificationType} email to ${email} [MessageID: ${mockEmailResult.messageId}]`);
-      } catch (error) {
-        console.log(`Failed to send personalized email to ${email}:`, error);
-        results.results.email = {
-          success: false,
-          error: error.message || 'Unknown error'
-        };
-      }
-    }
-    
-    // Send personalized SMS if enabled
-    if (channels.includes('sms') && templates.sms) {
-      try {
-        const { message } = templates.sms;
-        
-        console.log(`Sending personalized ${notificationType} SMS to: ${userData.phone}`);
-        console.log(`SMS content: "${message.substring(0, 50)}..."`);
-        
-        // Store preview for debugging/visibility
-        results.preview.sms = {
-          message: message.length > 100 ? `${message.substring(0, 100)}...` : message
-        };
-        
-        // This would normally call the actual SMS service with personalized content
-        // For now, we'll simulate using a mock service
-        const mockSmsResult = {
-          success: true,
-          messageId: `mock-sms-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          sentTo: userData.phone
-        };
-        
-        results.results.sms = mockSmsResult;
-        
-        console.log(`Successfully sent personalized ${notificationType} SMS to ${userData.phone} [MessageID: ${mockSmsResult.messageId}]`);
-      } catch (error) {
-        console.log(`Failed to send personalized SMS to ${userData.phone}:`, error);
-        results.results.sms = {
-          success: false,
-          error: error.message || 'Unknown error'
-        };
-      }
-    }
-    
-    // Mark overall success if at least one channel succeeded
-    results.success = Object.values(results.results).some(result => result.success);
-    results.channels = channels;
-    
-    return results;
+  /**
+   * Validates email format
+   * @param {string} email - Email address to validate
+   * @returns {boolean} Whether email format is valid
+   */
+  function validateEmailFormat(email) {
+    if (!email) return false;
+    // Basic email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+  
+  /**
+   * Validates phone number format
+   * @param {string} phone - Phone number to validate
+   * @returns {boolean} Whether phone format is valid
+   */
+  function validatePhoneFormat(phone) {
+    if (!phone) return false;
+    // Basic phone validation - allows various formats with optional country code
+    // This is simplified and should be replaced with a more robust solution in production
+    const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
+    return phoneRegex.test(phone);
   }
 
 /**
@@ -602,5 +918,7 @@ module.exports = {
   loadAndPersonalizeTemplates,
   prepareNotificationTemplates,
   renderTemplate,
-  getLanguageReport
+  getLanguageReport,
+  validateEmailFormat,
+  validatePhoneFormat
 };
