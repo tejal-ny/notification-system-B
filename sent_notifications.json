@@ -4,5 +4,12 @@
     "channel": "email",
     "message": "This is a test notification",
     "timestamp": "2025-06-04T10:43:09.552Z"
+  },
+  {
+    "notificationId": "1749036671146",
+    "userId": "example-user",
+    "channel": "email",
+    "message": "This is a test notification",
+    "timestamp": "2025-06-04T11:31:11.132Z"
   }
 ]
