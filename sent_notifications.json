@@ -7,5 +7,18 @@
     "status": "sent",
     "recipient": "tejal@example.com",
     "timestamp": "2025-06-04T12:12:30.819Z"
+  },
+  {
+    "notificationId": 1749039508140,
+    "userId": "example-user",
+    "channel": "email",
+    "message": "This is a test notification",
+    "recipient": "tejal@example.com",
+    "status": "sent",
+    "timestamp": "2025-06-04T12:18:28.140Z",
+    "metadata": {
+      "orderId": "A123",
+      "additionalInfo": "Test notification for example purposes"
+    }
   }
 ]

@@ -130,7 +130,11 @@ async function main() {
     message: 'This is a test notification',
     recipient: 'tejal@example.com',
     // timestamp: new Date().toISOString(),
-    status: 'sent'
+    status: 'sent',
+    metadata: {
+      orderId: 'A123',
+      additionalInfo: 'Test notification for example purposes'
+    }
   });
 }
 if (require.main === module) {
