@@ -78,6 +78,15 @@ function trackNotification({ userId, channel, message, recipient, status, metada
     
     // Add new notification
     notifications.push(notification);
+      
+    // Limit the number of notifications to the latest 100 entries
+    const MAX_NOTIFICATIONS = 2;
+    if (notifications.length > MAX_NOTIFICATIONS) {
+      const excessEntries = notifications.length - MAX_NOTIFICATIONS;
+      // Remove oldest entries (from the beginning of the array)
+      notifications = notifications.slice(excessEntries);
+      console.log(`Removed ${excessEntries} oldest notification entries to maintain limit of ${MAX_NOTIFICATIONS}`);
+    }
     
     try {
       // Write back to file
