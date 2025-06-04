@@ -124,10 +124,12 @@ async function sendExampleEmails() {
 // Example usage
 async function main() {
   const result = trackNotification({
+    notificationId: 1717636799123,
     userId: 'example-user',
     channel: 'email',
     message: 'This is a test notification',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    status: 'sent'
   });
 }
 if (require.main === module) {

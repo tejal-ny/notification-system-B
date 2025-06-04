@@ -11,5 +11,13 @@
     "channel": "email",
     "message": "This is a test notification",
     "timestamp": "2025-06-04T11:31:11.132Z"
+  },
+  {
+    "notificationId": 1749037599205,
+    "userId": "example-user",
+    "channel": "email",
+    "message": "This is a test notification",
+    "timestamp": "2025-06-04T11:46:39.196Z",
+    "status": "sent"
   }
 ]
