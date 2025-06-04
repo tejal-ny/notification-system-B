@@ -1054,83 +1054,210 @@ const sendNotificationByPreference = async (email, notificationType, data = {}, 
     for (const channel of channels) {
       try {
         if (channel === 'email') {
-          // Get appropriate email template
-          const template = getTemplate('email', notificationType, userPrefs.language || 'en');
-          
-          if (!template) {
-            console.log(`No ${notificationType} template found for ${userPrefs.language} language`);
-            results.results.email = { 
-              success: false, 
-              error: 'Template not found' 
-            };
-            continue;
-          }
-          
-          // Send email using mock service
-          const emailResult = await notifier.dispatch({
-            type: 'email',
-            recipient: email,
-            subject: template.subject,
-            message: template.body,
-            data: {
-              ...data,
-              userName: userPrefs.name || 'Valued Customer'
-            },
-            options: {
-              ...options,
-              mockMode: true, // Using mock mode as requested
-              preferencesOverridden: results.preferencesOverridden
+            try {
+              // Get user's preferred language with fallback to English
+              const userLanguage = userPrefs.language || 'en';
+              
+              // Try to get template in user's language with explicit metadata
+              const templateResult = getTemplate('email', notificationType, userLanguage, { 
+                includeMetadata: true,
+                strictMode: false  // Allow fallback to other languages
+              });
+              
+              // No template available at all
+              if (!templateResult) {
+                logger.error(`No ${notificationType} email template found for ${userLanguage} language or fallbacks`);
+                results.results.email = { 
+                  success: false, 
+                  error: 'Template not found',
+                  attemptedLanguage: userLanguage
+                };
+                continue;
+              }
+              
+              // Extract template and metadata
+              const { template, metadata } = typeof templateResult === 'object' && templateResult.template 
+                ? { template: templateResult.template, metadata: templateResult } 
+                : { template: templateResult, metadata: null };
+              
+              // Log if language fallback occurred
+              if (metadata && metadata.fallbackUsed) {
+                logger.warn(`Language fallback used for ${email}: requested ${userLanguage}, using ${metadata.selectedLanguage} instead`);
+                results.results.email = {
+                  ...results.results.email,
+                  languageFallbackUsed: true,
+                  requestedLanguage: userLanguage,
+                  usedLanguage: metadata.selectedLanguage
+                };
+              }
+              
+              // Validate recipient email format
+              if (!email.includes('@') || email.indexOf('@') === 0 || email.indexOf('@') === email.length - 1) {
+                logger.error(`Invalid email format for recipient: ${email}`);
+                results.results.email = { 
+                  success: false, 
+                  error: 'Invalid email format',
+                  attemptedLanguage: metadata?.selectedLanguage || userLanguage
+                };
+                continue;
+              }
+              
+              // Validate template has required fields
+              if (!template.subject || !template.body) {
+                logger.error(`Incomplete email template for ${notificationType} in ${metadata?.selectedLanguage || userLanguage} language`);
+                results.results.email = { 
+                  success: false, 
+                  error: 'Incomplete template structure',
+                  attemptedLanguage: metadata?.selectedLanguage || userLanguage
+                };
+                continue;
+              }
+              
+              // Send email using mock service with enhanced error handling
+              try {
+                const emailResult = await notifier.dispatch({
+                  type: 'email',
+                  recipient: email,
+                  subject: template.subject,
+                  message: template.body,
+                  data: {
+                    ...data,
+                    userName: userPrefs.name || 'Valued Customer'
+                  },
+                  options: {
+                    ...options,
+                    mockMode: true, // Using mock mode as requested
+                    language: metadata?.selectedLanguage || userLanguage
+                  }
+                });
+                
+                results.results.email = {
+                  success: !!emailResult.dispatched,
+                  messageId: emailResult.messageId || null,
+                  error: emailResult.error || null,
+                  language: metadata?.selectedLanguage || userLanguage,
+                  languageFallbackUsed: metadata?.fallbackUsed || false
+                };
+                
+                if (emailResult.dispatched) {
+                  logger.info(`Email ${notificationType} notification sent to ${email} in ${metadata?.selectedLanguage || userLanguage} language`);
+                } else {
+                  logger.error(`Email ${notificationType} notification failed for ${email}: ${emailResult.error || 'Unknown dispatch error'}`);
+                }
+              } catch (dispatchError) {
+                logger.error(`Exception during email dispatch to ${email}:`, dispatchError);
+                results.results.email = {
+                  success: false,
+                  error: `Dispatch error: ${dispatchError.message || 'Unknown error during sending'}`,
+                  language: metadata?.selectedLanguage || userLanguage,
+                  languageFallbackUsed: metadata?.fallbackUsed || false
+                };
+              }
+            } catch (templateError) {
+              logger.error(`Error processing email template for ${email}:`, templateError);
+              results.results.email = { 
+                success: false, 
+                error: `Template processing error: ${templateError.message || 'Unknown error'}`
+              };
             }
-          });
+          } 
           
-          results.results.email = {
-            success: !!emailResult.dispatched,
-            messageId: emailResult.messageId || null,
-            error: emailResult.error || null
-          };
-          
-          const overriddenMsg = results.preferencesOverridden ? ' (preferences overridden)' : '';
-          console.log(`Email ${notificationType} notification ${emailResult.dispatched ? 'sent' : 'failed'} to ${email}${overriddenMsg}`);
-        } 
-        
-        else if (channel === 'sms') {
-          // Get appropriate SMS template
-          const template = getTemplate('sms', notificationType, userPrefs.language || 'en');
-          
-          if (!template) {
-            console.log(`No ${notificationType} SMS template found for ${userPrefs.language} language`);
-            results.results.sms = { 
-              success: false, 
-              error: 'Template not found' 
-            };
-            continue;
-          }
-          
-          // Send SMS using mock service
-          const smsResult = await notifier.dispatch({
-            type: 'sms',
-            recipient: userPrefs.phone,
-            message: template,
-            data: {
-              ...data,
-              userName: userPrefs.name || 'Valued Customer'
-            },
-            options: {
-              ...options,
-              mockMode: true, // Using mock mode as requested
-              preferencesOverridden: results.preferencesOverridden
+          else if (channel === 'sms') {
+            try {
+              // Get user's preferred language with fallback to English
+              const userLanguage = userPrefs.language || 'en';
+              
+              // Try to get template in user's language with explicit metadata
+              const templateResult = getTemplate('sms', notificationType, userLanguage, { 
+                includeMetadata: true,
+                strictMode: false  // Allow fallback to other languages
+              });
+              
+              // No template available at all
+              if (!templateResult) {
+                logger.error(`No ${notificationType} SMS template found for ${userLanguage} language or fallbacks`);
+                results.results.sms = { 
+                  success: false, 
+                  error: 'Template not found',
+                  attemptedLanguage: userLanguage
+                };
+                continue;
+              }
+              
+              // Extract template and metadata
+              const { template, metadata } = typeof templateResult === 'object' && templateResult.template 
+                ? { template: templateResult.template, metadata: templateResult } 
+                : { template: templateResult, metadata: null };
+              
+              // Log if language fallback occurred
+              if (metadata && metadata.fallbackUsed) {
+                logger.warn(`SMS language fallback used for ${userPrefs.phone}: requested ${userLanguage}, using ${metadata.selectedLanguage} instead`);
+                results.results.sms = {
+                  ...results.results.sms,
+                  languageFallbackUsed: true,
+                  requestedLanguage: userLanguage,
+                  usedLanguage: metadata.selectedLanguage
+                };
+              }
+              
+              // Validate phone number (basic validation)
+              if (!userPrefs.phone || userPrefs.phone.length < 10) {
+                logger.error(`Invalid phone number format for SMS: ${userPrefs.phone}`);
+                results.results.sms = { 
+                  success: false, 
+                  error: 'Invalid phone number format',
+                  attemptedLanguage: metadata?.selectedLanguage || userLanguage
+                };
+                continue;
+              }
+              
+              // Send SMS using mock service with enhanced error handling
+              try {
+                const smsResult = await notifier.dispatch({
+                  type: 'sms',
+                  recipient: userPrefs.phone,
+                  message: template,
+                  data: {
+                    ...data,
+                    userName: userPrefs.name || 'Valued Customer'
+                  },
+                  options: {
+                    ...options,
+                    mockMode: true, // Using mock mode as requested
+                    language: metadata?.selectedLanguage || userLanguage
+                  }
+                });
+                
+                results.results.sms = {
+                  success: !!smsResult.dispatched,
+                  messageId: smsResult.messageId || null,
+                  error: smsResult.error || null,
+                  language: metadata?.selectedLanguage || userLanguage,
+                  languageFallbackUsed: metadata?.fallbackUsed || false
+                };
+                
+                if (smsResult.dispatched) {
+                  logger.info(`SMS ${notificationType} notification sent to ${userPrefs.phone} in ${metadata?.selectedLanguage || userLanguage} language`);
+                } else {
+                  logger.error(`SMS ${notificationType} notification failed for ${userPrefs.phone}: ${smsResult.error || 'Unknown dispatch error'}`);
+                }
+              } catch (dispatchError) {
+                logger.error(`Exception during SMS dispatch to ${userPrefs.phone}:`, dispatchError);
+                results.results.sms = {
+                  success: false,
+                  error: `Dispatch error: ${dispatchError.message || 'Unknown error during sending'}`,
+                  language: metadata?.selectedLanguage || userLanguage,
+                  languageFallbackUsed: metadata?.fallbackUsed || false
+                };
+              }
+            } catch (templateError) {
+              logger.error(`Error processing SMS template for ${userPrefs.phone}:`, templateError);
+              results.results.sms = { 
+                success: false, 
+                error: `Template processing error: ${templateError.message || 'Unknown error'}`
+              };
             }
-          });
-          
-          results.results.sms = {
-            success: !!smsResult.dispatched,
-            messageId: smsResult.messageId || null,
-            error: smsResult.error || null
-          };
-          
-          const overriddenMsg = results.preferencesOverridden ? ' (preferences overridden)' : '';
-          console.log(`SMS ${notificationType} notification ${smsResult.dispatched ? 'sent' : 'failed'} to ${userPrefs.phone}${overriddenMsg}`);
-        }
+          }
       } catch (error) {
         console.log(`Error sending ${channel} notification to ${email}:`, error);
         results.results[channel] = {
