@@ -128,7 +128,7 @@ async function main() {
     userId: 'example-user',
     channel: 'email',
     message: 'This is a test notification',
-    timestamp: new Date().toISOString(),
+    // timestamp: new Date().toISOString(),
     status: 'sent'
   });
 }
